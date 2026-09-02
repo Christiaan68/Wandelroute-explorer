@@ -118,7 +118,7 @@ export function ProposalScreen() {
 
   return (
     <main className="flex flex-1 flex-col">
-      <div className="h-[45vh] min-h-[280px] w-full">
+      <div className="h-[45vh] min-h-[280px] w-full bg-moss-100">
         <MapView routeGeometry={candidate.geometry} startPoint={params.start} />
       </div>
 

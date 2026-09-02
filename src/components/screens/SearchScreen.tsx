@@ -320,7 +320,7 @@ export function SearchScreen() {
             </button>
 
             {showMapPicker && (
-              <div className="h-64 overflow-hidden rounded-lg ring-1 ring-moss-200">
+              <div className="h-64 overflow-hidden rounded-lg bg-moss-100 ring-1 ring-moss-200">
                 <MapView startPoint={startCoordinate ?? undefined} onMapClick={handleMapClick} />
               </div>
             )}

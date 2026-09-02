@@ -72,7 +72,7 @@ export function SummaryScreen() {
 
   return (
     <main className="flex flex-1 flex-col">
-      <div className="h-[35vh] min-h-[220px] w-full">
+      <div className="h-[35vh] min-h-[220px] w-full bg-moss-100">
         <MapView routeGeometry={walk.plannedRoute} traveledGeometry={walk.actualTrack} startPoint={walk.start} />
       </div>
 

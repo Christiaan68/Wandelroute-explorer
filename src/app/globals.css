@@ -13,6 +13,33 @@ body {
 
 body {
   @apply bg-moss-50 text-bark-900 antialiased;
+  position: relative;
+}
+
+/*
+ * Decoratieve achtergrondillustratie (wandelpad) achter alle schermen.
+ * Vast gepositioneerd via een pseudo-element i.p.v. `background-attachment:
+ * fixed` op body zelf — dat laatste geeft bekende rendering-/scroll-jank in
+ * mobiele Safari (en dus juist op de doelgroep-toestellen van deze PWA). Een
+ * lichte, aan de huisstijl (moss-50) gekoppelde overlay houdt tekst en kaarten
+ * goed leesbaar bovenop de illustratie.
+ *
+ * LET OP: dit werkt alleen achter de content omdat MapLibre-kaartcontainers
+ * elders (SearchScreen/ProposalScreen/SummaryScreen/NavigationScreen) een
+ * eigen expliciete, ondoorzichtige achtergrondkleur hebben gekregen — zo kan
+ * deze afbeelding nooit achter/onder de kaart doorschemeren, ook niet heel
+ * even tijdens het laden van de kaarttegels.
+ */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background-image: linear-gradient(rgba(242, 247, 241, 0.5), rgba(242, 247, 241, 0.5)),
+    url("/images/wandel-achtergrond.jpg");
+  background-size: cover;
+  background-position: center bottom;
+  background-repeat: no-repeat;
 }
 
 /* Grote, duimvriendelijke tik-targets tijdens navigatie (WCAG 2.1 AA: min. 44x44px). */

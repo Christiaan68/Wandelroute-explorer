@@ -316,7 +316,7 @@ export function NavigationScreen() {
         offRoute={offRouteWarning}
       />
 
-      <div className="relative flex-1">
+      <div className="relative flex-1 bg-moss-100">
         <MapView
           routeGeometry={progress?.remaining ?? activeRoute.geometry}
           traveledGeometry={progress?.traveled}
