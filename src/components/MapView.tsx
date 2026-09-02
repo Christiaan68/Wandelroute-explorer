@@ -5,7 +5,16 @@ import "maplibre-gl/dist/maplibre-gl.css";
 import { useEffect, useRef } from "react";
 import type { Coordinate, LngLat } from "@/lib/types";
 
-const DEFAULT_STYLE_URL = process.env.NEXT_PUBLIC_MAP_STYLE_URL ?? "https://tiles.openfreemap.org/styles/liberty";
+// Let op: hier bewust "||" i.p.v. "??" gebruiken. Vercel vult bij het
+// importeren van een project alle keys uit .env.example automatisch voor
+// in het environment-variables-formulier — inclusief deze, met een LEGE
+// waarde als je hem niet zelf invult. process.env.NEXT_PUBLIC_MAP_STYLE_URL
+// is dan dus "" (lege string), niet undefined. "??" valt alleen terug bij
+// null/undefined, dus een lege string zou dan als (ongeldige) stijl-URL
+// worden doorgegeven aan MapLibre, met een lege/blanco kaart tot gevolg
+// zonder enige foutmelding. "||" behandelt een lege string ook als "niet
+// ingevuld" en valt dan terecht terug op de standaardwaarde.
+const DEFAULT_STYLE_URL = process.env.NEXT_PUBLIC_MAP_STYLE_URL || "https://tiles.openfreemap.org/styles/liberty";
 
 export interface MapViewProps {
   /** Volledige geplande route (grijs/basislijn), of tijdens navigatie de resterende route. */
