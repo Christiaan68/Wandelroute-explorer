@@ -142,10 +142,7 @@ export function ProposalScreen() {
           </div>
         ) : (
           <div className="flex flex-col gap-3">
-            <p className="rounded-lg bg-moss-50 px-3 py-2 text-sm text-moss-800">
-              Route geaccepteerd. Zet je telefoon rechtop en zorg voor vrij zicht op de hemel voor een goed
-              gps-signaal.
-            </p>
+            <p className="rounded-lg bg-moss-50 px-3 py-2 text-sm text-moss-800">Deze route is geselecteerd.</p>
             <button
               onClick={() => router.push("/navigeren")}
               className="tap-target rounded-xl bg-moss-700 px-4 py-4 text-lg font-bold text-white shadow-md"
