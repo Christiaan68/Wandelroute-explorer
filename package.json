@@ -1,0 +1,40 @@
+{
+  "name": "wandelroute-explorer",
+  "version": "0.1.0",
+  "private": true,
+  "description": "PWA om rondwandelingen te vinden op een gekozen afstand, met live GPS-navigatie en afslag-instructies.",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@turf/turf": "^7.1.0",
+    "idb": "^8.0.0",
+    "maplibre-gl": "^4.7.1",
+    "next": "^14.2.15",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "zustand": "^4.5.5"
+  },
+  "devDependencies": {
+    "@testing-library/jest-dom": "^6.5.0",
+    "@testing-library/react": "^16.0.1",
+    "@types/node": "^20.16.10",
+    "@types/geojson": "^7946.0.14",
+    "@types/react": "^18.3.11",
+    "@types/react-dom": "^18.3.0",
+    "autoprefixer": "^10.4.20",
+    "eslint": "^8.57.1",
+    "eslint-config-next": "^14.2.15",
+    "fake-indexeddb": "^6.0.0",
+    "jsdom": "^25.0.1",
+    "postcss": "^8.4.47",
+    "tailwindcss": "^3.4.13",
+    "typescript": "^5.6.2",
+    "vitest": "^2.1.2"
+  }
+}

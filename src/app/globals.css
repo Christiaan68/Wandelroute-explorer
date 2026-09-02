@@ -1,0 +1,42 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  @apply bg-moss-50 text-bark-900 antialiased;
+}
+
+/* Grote, duimvriendelijke tik-targets tijdens navigatie (WCAG 2.1 AA: min. 44x44px). */
+.tap-target {
+  min-height: 48px;
+  min-width: 48px;
+}
+
+/* Ruimte voor de notch/home-indicator wanneer de PWA "standalone" draait. */
+.safe-bottom {
+  padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
+}
+.safe-top {
+  padding-top: max(0.75rem, env(safe-area-inset-top));
+}
+
+.maplibregl-map {
+  font: inherit;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}

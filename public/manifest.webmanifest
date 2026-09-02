@@ -1,0 +1,17 @@
+{
+  "name": "Wandelroute Explorer",
+  "short_name": "Wandelroute",
+  "description": "Vind een rondwandeling op jouw gewenste afstand en laat je onderweg begeleiden met gps-navigatie.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#f2f7f1",
+  "theme_color": "#3a663c",
+  "lang": "nl",
+  "icons": [
+    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-512-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
