@@ -9,14 +9,50 @@ import "./globals.css";
 // plaats daarvan de systeemfont-stack (tailwind.config.ts), die overal werkt,
 // sneller laadt en geen extra netwerkverzoek kost.
 
+const SITE_URL = "https://mijnloopje.nl";
+const SITE_TITLE = "Wandelroute Explorer";
+const SITE_DESCRIPTION =
+  "Vind een rondwandeling op jouw gewenste afstand en laat je onderweg begeleiden met gps-navigatie.";
+
 export const metadata: Metadata = {
-  title: "Wandelroute Explorer",
-  description: "Vind een rondwandeling op jouw gewenste afstand en laat je onderweg begeleiden met gps-navigatie.",
+  // Absolute basis-URL voor relatieve afbeeldingen in metadata (bv. og:image).
+  // Vast op het eigen domein zodat linkvoorbeelden (WhatsApp, iMessage, etc.)
+  // altijd naar dezelfde, werkende afbeelding wijzen, ongeacht via welk domein
+  // (mijnloopje.nl of het vercel.app-adres) de link gedeeld wordt.
+  metadataBase: new URL(SITE_URL),
+  title: SITE_TITLE,
+  description: SITE_DESCRIPTION,
   manifest: "/manifest.webmanifest",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "Wandelroute Explorer",
+    title: SITE_TITLE,
+  },
+  // Expliciete Open Graph-tags: zonder deze valt een linkvoorbeeld terug op
+  // wat de chat-app zelf uit de pagina raadt (soms niets, soms alleen tekst
+  // zonder afbeelding). Met deze tags krijgt elke gedeelde link altijd
+  // dezelfde volledige preview (titel, omschrijving en afbeelding).
+  openGraph: {
+    title: SITE_TITLE,
+    description: SITE_DESCRIPTION,
+    url: SITE_URL,
+    siteName: SITE_TITLE,
+    images: [
+      {
+        url: "/icons/icon-512.png",
+        width: 512,
+        height: 512,
+        alt: SITE_TITLE,
+      },
+    ],
+    locale: "nl_NL",
+    type: "website",
+  },
+  twitter: {
+    card: "summary",
+    title: SITE_TITLE,
+    description: SITE_DESCRIPTION,
+    images: ["/icons/icon-512.png"],
   },
 };
 
