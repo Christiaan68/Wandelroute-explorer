@@ -6,6 +6,16 @@ import { closestPointOnLine, cumulativeDistances, lngLatToCoord } from "@/lib/ge
 export const OFF_ROUTE_TOLERANCE_METERS = 30;
 /** Binnen deze afstand van het eindpunt beschouwen we de wandeling als voltooid. */
 export const ARRIVAL_THRESHOLD_METERS = 20;
+/**
+ * Maximale plausibele verschuiving (in meters "afstand langs de route") tussen twee
+ * opeenvolgende gps-metingen. Voorkomt dat bij een rondwandeling (start == eindpunt) een
+ * meting vlakbij het startpunt per ongeluk aan het SLUITENDE stuk van de lus wordt
+ * toegewezen (die twee liggen fysiek vlak bij elkaar, maar liggen "langs de route" gemeten
+ * bijna een hele routelengte uit elkaar) — zonder dit venster kan dat een valse
+ * aankomstmelding geven vlak na vertrek. Ruim voldoende voor normale wandelsnelheid tussen
+ * gps-updates, met marge voor tijdelijk gps-signaalverlies.
+ */
+export const DEFAULT_MAX_PROGRESS_JUMP_METERS = 200;
 
 export interface RouteProgress {
   distanceAlongRouteMeters: number;
@@ -28,9 +38,20 @@ export function computeRouteProgress(
   route: RouteCandidate,
   currentPosition: Coordinate,
   offRouteToleranceMeters: number = OFF_ROUTE_TOLERANCE_METERS,
+  /**
+   * Afstand langs de route (meters) waar de vorige meting eindigde. Standaard 0, wat
+   * overeenkomt met "net vertrokken" — precies het geval waarin de dubbelzinnigheid tussen
+   * start en eindpunt van een lus anders zou kunnen misgaan. Bij een nieuwe/herberekende
+   * route hoort dit ook weer op 0 te staan (zie NavigationScreen, dat dit per route-id bijhoudt).
+   */
+  previousDistanceAlongRouteMeters: number = 0,
+  maxProgressJumpMeters: number = DEFAULT_MAX_PROGRESS_JUMP_METERS,
 ): RouteProgress {
   const geometry = route.geometry;
-  const closest = closestPointOnLine(currentPosition, geometry);
+  const closest = closestPointOnLine(currentPosition, geometry, {
+    anchorMeters: previousDistanceAlongRouteMeters,
+    maxJumpMeters: maxProgressJumpMeters,
+  });
   const cumDist = cumulativeDistances(geometry);
   const totalDistanceMeters = cumDist[cumDist.length - 1] ?? route.distanceMeters;
 

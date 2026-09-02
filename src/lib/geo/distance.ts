@@ -84,12 +84,33 @@ export interface ClosestPointResult {
   distanceAlongLineMeters: number;
 }
 
+export interface ClosestPointSearchWindow {
+  /** Verwachte positie langs de lijn (meters vanaf het startpunt), gebaseerd op de vorige meting. */
+  anchorMeters: number;
+  /** Maximale afwijking t.o.v. anchorMeters die nog als plausibel geldt voor één gps-update. */
+  maxJumpMeters: number;
+}
+
 /**
  * Projecteer `point` loodrecht op de polylijn `line` en geef het dichtstbijzijnde punt terug.
  * Gebruikt een lokale equirectangular-benadering (nauwkeurig genoeg over de korte afstanden
  * van een segment binnen een wandelroute) in plaats van zware sferische interpolatie.
+ *
+ * `searchWindow` beperkt de zoektocht (optioneel) tot segmenten rond een verwachte
+ * positie langs de route. Dit is nodig voor rondwandelingen (start == eindpunt): zonder
+ * venster kan een punt vlakbij het startpunt qua rechte-lijn-afstand even dicht (of
+ * dichter, door gps-ruis) bij het SLUITENDE stuk van de lus liggen als bij het begin
+ * ervan, waardoor "afstand langs de route" abrupt naar bijna-de-volledige-lengte kan
+ * springen — met een valse aankomstmelding meteen bij vertrek tot gevolg. Als het venster
+ * geen (goede) match oplevert, valt deze functie terug op een ongefilterde zoektocht over
+ * de hele lijn, zodat een echte, grote afwijking (bv. na langdurig gps-signaalverlies) nog
+ * steeds correct wordt gevonden.
  */
-export function closestPointOnLine(point: Coordinate, line: LngLat[]): ClosestPointResult {
+export function closestPointOnLine(
+  point: Coordinate,
+  line: LngLat[],
+  searchWindow?: ClosestPointSearchWindow,
+): ClosestPointResult {
   if (line.length === 0) {
     throw new Error("closestPointOnLine: lege lijn");
   }
@@ -118,6 +139,16 @@ export function closestPointOnLine(point: Coordinate, line: LngLat[]): ClosestPo
   let best: ClosestPointResult | null = null;
 
   for (let i = 0; i < line.length - 1; i++) {
+    if (searchWindow) {
+      const segStartDist = cumDist[i]!;
+      const segEndDist = cumDist[i + 1]!;
+      const { anchorMeters, maxJumpMeters } = searchWindow;
+      // Segment valt volledig buiten het venster rond de verwachte positie -> overslaan.
+      if (segEndDist < anchorMeters - maxJumpMeters || segStartDist > anchorMeters + maxJumpMeters) {
+        continue;
+      }
+    }
+
     const a = project(lngLatToCoord(line[i]!));
     const b = project(lngLatToCoord(line[i + 1]!));
     const abx = b.x - a.x;
@@ -147,6 +178,13 @@ export function closestPointOnLine(point: Coordinate, line: LngLat[]): ClosestPo
         distanceAlongLineMeters: cumDist[i]! + t * segLenMeters,
       };
     }
+  }
+
+  if (searchWindow && (!best || best.distanceToLineMeters > searchWindow.maxJumpMeters)) {
+    // Binnen het venster is niets (goeds) gevonden — bv. een grote gps-sprong voorbij wat
+    // nog plausibel was, of langdurig signaalverlies. Val terug op de volledige, ongefilterde
+    // zoektocht zodat de werkelijke positie op de route alsnog gevonden wordt.
+    return closestPointOnLine(point, line);
   }
 
   return best!;

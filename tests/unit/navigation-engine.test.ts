@@ -41,6 +41,50 @@ describe("computeRouteProgress — voortgang langs de route", () => {
   });
 });
 
+describe("computeRouteProgress — rondwandelingen (start === eindpunt)", () => {
+  // Vierkante lus van ~2,4 km, net als een door de routing-provider gegenereerde
+  // rondwandeling: geometry[0] === geometry[laatste]. Regressietest voor een bug waarbij
+  // de wandeling meteen na vertrek als "aangekomen" werd gemarkeerd, omdat het startpunt
+  // en het (fysiek identieke) eindpunt van de lus qua rechte-lijn-afstand even dichtbij
+  // konden liggen, en de gevonden "afstand langs de route" dan naar bijna-de-volledige-
+  // lengte kon omslaan in plaats van naar 0.
+  const LOOP_ROUTE: RouteCandidate = {
+    id: "loop-1",
+    geometry: [
+      [5.0, 52.0],
+      [5.009, 52.0],
+      [5.009, 52.0055],
+      [5.0, 52.0055],
+      [5.0, 52.0],
+    ],
+    distanceMeters: 0,
+    durationSeconds: 0,
+    instructions: [
+      { pointIndex: 0, maneuver: "depart", text: "Vertrek", distanceToNextMeters: 600 },
+      { pointIndex: 4, maneuver: "arrive", text: "Aangekomen", distanceToNextMeters: 0 },
+    ],
+    surface: { pavedMeters: 0, unpavedMeters: 0, unknownMeters: 0 },
+    elevation: null,
+    generationSeed: 0,
+  };
+  const START = { lat: 52.0, lng: 5.0 };
+
+  it("markeert een wandeling niet als voltooid vlak na vertrek vanaf het startpunt", () => {
+    // Dit is exact het gerapporteerde scenario: eerste gps-fix, precies op het startpunt.
+    const progress = computeRouteProgress(LOOP_ROUTE, START);
+    expect(progress.hasArrived).toBe(false);
+    expect(progress.distanceAlongRouteMeters).toBeLessThan(50);
+  });
+
+  it("herkent aankomst wel als de vorige voortgang al bijna de volledige lus was", () => {
+    const totalMeters = computeRouteProgress(LOOP_ROUTE, START).totalDistanceMeters;
+    // Simuleer dat de vorige meting al bijna rond was (net als NavigationScreen dat per
+    // gps-update doorgeeft via previousDistanceAlongRouteMeters).
+    const progress = computeRouteProgress(LOOP_ROUTE, START, undefined, totalMeters - 15);
+    expect(progress.hasArrived).toBe(true);
+  });
+});
+
 describe("computeRouteProgress — detectie van afwijkingen", () => {
   it("markeert als off-route wanneer de afstand tot de lijn de tolerantie overschrijdt", () => {
     // Dit punt ligt ver van de route (ongeveer 1,1 km oostelijk).

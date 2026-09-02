@@ -85,4 +85,38 @@ describe("closestPointOnLine", () => {
     const result = closestPointOnLine(onLine, line);
     expect(result.distanceToLineMeters).toBeCloseTo(0, 0);
   });
+
+  describe("met searchWindow (rondwandelingen: start === eindpunt)", () => {
+    // Vierkante lus van ~2,4 km, start en eindpunt zijn hetzelfde punt — net als een
+    // door de routing-provider gegenereerde rondwandeling.
+    const LOOP: [number, number][] = [
+      [5.0, 52.0],
+      [5.009, 52.0],
+      [5.009, 52.0055],
+      [5.0, 52.0055],
+      [5.0, 52.0],
+    ];
+    const START = { lat: 52.0, lng: 5.0 };
+
+    it("wijst een punt vlak bij start/eindpunt zonder venster toe aan het begin van de lijn", () => {
+      // Zonder venster kan dit in theorie naar beide kanten omslaan; met de huidige
+      // (eerst-gevonden-wint-bij-gelijke-afstand) implementatie hoort dit naar het begin
+      // te gaan. Deze test legt dat gedrag vast zodat een regressie opvalt.
+      const result = closestPointOnLine(START, LOOP);
+      expect(result.distanceAlongLineMeters).toBeLessThan(50);
+    });
+
+    it("blijft bij het begin van de lus wanneer het venster rond 0 verankerd is", () => {
+      const result = closestPointOnLine(START, LOOP, { anchorMeters: 0, maxJumpMeters: 200 });
+      expect(result.distanceAlongLineMeters).toBeLessThan(50);
+    });
+
+    it("valt terug op een ongefilterde zoektocht als het venster geen goede match oplevert", () => {
+      // Venster rond 1000m verankerd, maar het punt ligt in werkelijkheid bij het begin
+      // (0m) — binnen dat venster is geen enkel segment fysiek dichtbij, dus dit moet
+      // terugvallen op de volledige zoektocht en alsnog bij het begin uitkomen.
+      const result = closestPointOnLine(START, LOOP, { anchorMeters: 1000, maxJumpMeters: 10 });
+      expect(result.distanceAlongLineMeters).toBeLessThan(50);
+    });
+  });
 });

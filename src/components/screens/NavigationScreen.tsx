@@ -7,6 +7,7 @@ import { InstructionBanner } from "@/components/InstructionBanner";
 import { useGeolocation, type GeolocationFix } from "@/hooks/useGeolocation";
 import { useWakeLock } from "@/hooks/useWakeLock";
 import { apiGenerateRoute } from "@/lib/api-client";
+import { closestPointOnLine, lngLatToCoord } from "@/lib/geo/distance";
 import {
   averageSpeedKmh,
   computeRouteProgress,
@@ -60,6 +61,15 @@ export function NavigationScreen() {
   const announcedRef = useRef<Set<string>>(new Set());
   const lastJournalSaveRef = useRef(0);
   const startedAtMsRef = useRef<number>(Date.now());
+  // Houdt de laatst bekende "afstand langs de route" bij, per route-id. Nodig omdat
+  // computeRouteProgress voor rondwandelingen (start == eindpunt) anders vlak na vertrek de
+  // gps-positie per ongeluk aan het sluitende stuk van de lus kan toewijzen (fysiek dichtbij,
+  // maar "langs de route" bijna de volledige lengte verderop) — met een valse aankomstmelding
+  // meteen bij vertrek tot gevolg. Bij een nieuwe/herberekende route (ander route-id) begint
+  // dit weer bij 0, behalve bij het hervatten van een wandeling met al opgeslagen track (zie
+  // hieronder), waar we 'm juist seeden vanaf de laatst bekende positie.
+  const previousProgressMetersRef = useRef(0);
+  const lastRouteIdRef = useRef<string | null>(null);
 
   useWakeLock(keepAwake && !finished);
 
@@ -81,6 +91,16 @@ export function NavigationScreen() {
         initialTrack: snapshot.actualTrack,
       });
       setTrack(snapshot.actualTrack);
+
+      // Bij hervatten: seed de voortgangstracking vanaf het laatst opgeslagen trackpunt
+      // i.p.v. vanaf 0, anders lijkt een bijna-voltooide wandeling na hervatten onterecht
+      // weer "net begonnen" (zie previousProgressMetersRef hierboven).
+      if (snapshot.actualTrack.length > 0) {
+        const lastPoint = snapshot.actualTrack[snapshot.actualTrack.length - 1]!;
+        const seeded = closestPointOnLine(lngLatToCoord(lastPoint), snapshot.plannedRoute.geometry);
+        previousProgressMetersRef.current = seeded.distanceAlongLineMeters;
+        lastRouteIdRef.current = snapshot.plannedRoute.id;
+      }
       return;
     }
 
@@ -164,7 +184,18 @@ export function NavigationScreen() {
 
   const progress = useMemo(() => {
     if (!activeRoute || !currentFix) return null;
-    return computeRouteProgress(activeRoute, currentFix.coordinate);
+    if (lastRouteIdRef.current !== activeRoute.id) {
+      lastRouteIdRef.current = activeRoute.id;
+      previousProgressMetersRef.current = 0;
+    }
+    const result = computeRouteProgress(
+      activeRoute,
+      currentFix.coordinate,
+      undefined,
+      previousProgressMetersRef.current,
+    );
+    previousProgressMetersRef.current = result.distanceAlongRouteMeters;
+    return result;
   }, [activeRoute, currentFix]);
 
   // Off-route detectie + spraak + journaal-opslag, telkens als er nieuwe voortgang is.
