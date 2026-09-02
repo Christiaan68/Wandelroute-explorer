@@ -317,14 +317,31 @@ export function NavigationScreen() {
       />
 
       <div className="relative flex-1 bg-moss-100">
-        <MapView
-          routeGeometry={progress?.remaining ?? activeRoute.geometry}
-          traveledGeometry={progress?.traveled}
-          userPosition={currentFix?.coordinate}
-          userHeadingDegrees={currentFix?.headingDegrees}
-          followUser
-          className="absolute inset-0"
-        />
+        {/*
+          LET OP: MapView zelf krijgt hier bewust GEEN "absolute inset-0"
+          className mee (zoals eerder wel het geval was). MapLibre's eigen
+          stylesheet (maplibre-gl.css) bevat de regel ".maplibregl-map {
+          position: relative }" — die class plakt de bibliotheek zelf op de
+          container-div van MapView. Bij gelijke CSS-specificiteit (beide zijn
+          simpele class-selectors) wint de regel die als laatste in de
+          gebundelde CSS staat, en dat bleek hier Tailwinds ".absolute" te
+          overschrijven met "position: relative". Resultaat: de kaart-div had
+          geen "top/right/bottom/left: 0" meer die daadwerkelijk werkte, kreeg
+          hoogte 0, en de kaart bleef leeg (alleen op dit scherm — elders wordt
+          MapView altijd in een apart, al-hoogte-hebbend div geplaatst, dus
+          daar speelde dit niet). Fix: de absolute positionering zit nu op een
+          apart wrapper-div ERBUITEN, dat niet de "maplibregl-map"-class van
+          de bibliotheek krijgt en dus niet met die regel kan botsen.
+        */}
+        <div className="absolute inset-0">
+          <MapView
+            routeGeometry={progress?.remaining ?? activeRoute.geometry}
+            traveledGeometry={progress?.traveled}
+            userPosition={currentFix?.coordinate}
+            userHeadingDegrees={currentFix?.headingDegrees}
+            followUser
+          />
+        </div>
 
         {offRouteWarning && (
           <div className="absolute inset-x-0 bottom-24 mx-4 rounded-xl bg-white p-4 shadow-lg ring-1 ring-alert">
