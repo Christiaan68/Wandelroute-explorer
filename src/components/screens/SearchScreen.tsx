@@ -20,6 +20,10 @@ const DISTANCE_PRESETS_METERS = [5000, 10000, 15000];
 const MIN_DISTANCE_METERS = 500;
 const MAX_DISTANCE_METERS = 60000;
 type DistanceUnit = "km" | "m";
+
+function formatDistanceForUnit(meters: number, unit: DistanceUnit): string {
+  return unit === "km" ? String(roundTo(meters / 1000, 2)) : String(Math.round(meters));
+}
 const TOLERANCE_OPTIONS: { value: DistanceTolerance; label: string }[] = [
   { value: 0.05, label: "5%" },
   { value: 0.1, label: "10%" },
@@ -39,6 +43,14 @@ export function SearchScreen() {
   // wordt getoond/ingevuld, zodat je zonder omrekenen ook een exacte waarde als 3750 m kunt intypen.
   const [distanceMeters, setDistanceMeters] = useState(5000);
   const [distanceUnit, setDistanceUnit] = useState<DistanceUnit>("km");
+  // Aparte tekst-state voor het invoerveld: zo kan het veld leeggemaakt/overtypt
+  // worden zonder dat elke toetsaanslag meteen wordt "teruggezet" naar de vorige
+  // geldige waarde. Voorheen werd de waarde van het veld rechtstreeks uit
+  // distanceMeters herberekend; zodra je alles weghaalde werd parseFloat("") de
+  // ongeldige waarde NaN, de state werd dan niet bijgewerkt, en React zette het
+  // veld dus meteen terug naar het oude cijfer — het leek dan of je de "5" niet
+  // kon weghalen.
+  const [distanceInputText, setDistanceInputText] = useState(() => formatDistanceForUnit(5000, "km"));
   const [tolerance, setTolerance] = useState<DistanceTolerance>(0.1);
   const [surfacePreference, setSurfacePreference] = useState<SurfacePreference>("unpaved");
 
@@ -176,11 +188,21 @@ export function SearchScreen() {
               min={distanceUnit === "km" ? MIN_DISTANCE_METERS / 1000 : MIN_DISTANCE_METERS}
               max={distanceUnit === "km" ? MAX_DISTANCE_METERS / 1000 : MAX_DISTANCE_METERS}
               step={distanceUnit === "km" ? 0.1 : 50}
-              value={distanceUnit === "km" ? roundTo(distanceMeters / 1000, 2) : Math.round(distanceMeters)}
+              value={distanceInputText}
               onChange={(e) => {
-                const value = parseFloat(e.target.value);
+                const raw = e.target.value;
+                // Altijd de ruwe tekst tonen (ook leeg of half getypt), anders
+                // "springt" het veld terug naar de vorige waarde en kan je een
+                // cijfer niet weghalen om iets nieuws te typen.
+                setDistanceInputText(raw);
+                const value = parseFloat(raw);
                 if (Number.isNaN(value)) return;
                 setDistanceMeters(distanceUnit === "km" ? value * 1000 : value);
+              }}
+              onBlur={() => {
+                // Veld leeg of ongeldig achtergelaten bij het verlaten van het veld?
+                // Terugzetten naar de laatst geldige waarde.
+                setDistanceInputText(formatDistanceForUnit(distanceMeters, distanceUnit));
               }}
               aria-label={`Gewenste afstand in ${distanceUnit === "km" ? "kilometers" : "meters"}`}
               className="tap-target w-28 rounded-lg border border-moss-200 px-3 py-2 text-lg font-semibold"
@@ -190,7 +212,10 @@ export function SearchScreen() {
                 <button
                   type="button"
                   key={unit}
-                  onClick={() => setDistanceUnit(unit)}
+                  onClick={() => {
+                    setDistanceUnit(unit);
+                    setDistanceInputText(formatDistanceForUnit(distanceMeters, unit));
+                  }}
                   aria-pressed={distanceUnit === unit}
                   className={`tap-target px-3 py-2 text-sm font-semibold ${
                     distanceUnit === unit ? "bg-moss-600 text-white" : "bg-white text-moss-700"
@@ -205,7 +230,10 @@ export function SearchScreen() {
                 <button
                   type="button"
                   key={preset}
-                  onClick={() => setDistanceMeters(preset)}
+                  onClick={() => {
+                    setDistanceMeters(preset);
+                    setDistanceInputText(formatDistanceForUnit(preset, distanceUnit));
+                  }}
                   className={`tap-target rounded-lg px-3 py-2 text-sm font-medium ${
                     distanceMeters === preset ? "bg-moss-600 text-white" : "bg-moss-50 text-moss-700"
                   }`}
