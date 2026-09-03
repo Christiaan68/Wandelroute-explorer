@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useRouteSearch } from "@/hooks/useRouteSearch";
 import { usePlannerStore } from "@/lib/state/planner-store";
+import { useSettingsStore } from "@/lib/state/settings-store";
+import { getVoiceGuide } from "@/lib/speech/voice";
 import { RouteStatsCard } from "@/components/RouteStatsCard";
 import type { DistanceTolerance, SurfacePreference } from "@/lib/types";
 
@@ -21,6 +23,7 @@ export function ProposalScreen() {
   const params = usePlannerStore((s) => s.params);
   const errorMessage = usePlannerStore((s) => s.errorMessage);
   const clearRejectedHistory = usePlannerStore((s) => s.clearRejectedHistory);
+  const voiceEnabled = useSettingsStore((s) => s.voiceEnabled);
   const [accepted, setAccepted] = useState(false);
 
   if (!params) {
@@ -144,7 +147,20 @@ export function ProposalScreen() {
           <div className="flex flex-col gap-3">
             <p className="rounded-lg bg-moss-50 px-3 py-2 text-sm text-moss-800">Deze route is geselecteerd.</p>
             <button
-              onClick={() => router.push("/navigeren")}
+              onClick={() => {
+                // Sommige browsers (met name Safari/iOS) spelen gesproken tekst
+                // alleen af als de allereerste speak()-aanroep synchroon binnen
+                // een echte tik/klik gebeurt. Latere, automatische aanroepen
+                // (bij gps-updates op het navigatiescherm) werken daarna vanzelf
+                // mee — mits dit hier al één keer is gebeurd. Zonder deze regel
+                // blijft spraaknavigatie op sommige telefoons stil, ook al staat
+                // de instelling gewoon aan.
+                if (voiceEnabled) {
+                  getVoiceGuide().setEnabled(true);
+                  getVoiceGuide().speak("Spraaknavigatie gestart.");
+                }
+                router.push("/navigeren");
+              }}
               className="tap-target rounded-xl bg-moss-700 px-4 py-4 text-lg font-bold text-white shadow-md"
             >
               🚶 Nu vertrekken
