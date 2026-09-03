@@ -13,6 +13,11 @@ const SITE_URL = "https://mijnloopje.nl";
 const SITE_TITLE = "Wandelroute Explorer";
 const SITE_DESCRIPTION =
   "Vind een rondwandeling op jouw gewenste afstand en laat je onderweg begeleiden met gps-navigatie.";
+// Naam die iOS Safari voorstelt (en die je nog kunt aanpassen) bij "Zet op
+// beginscherm" — dit is wat er onder het app-icoon op het beginscherm komt te
+// staan. Los van SITE_TITLE gehouden zodat de paginatitel/linkvoorbeelden
+// (browsertab, WhatsApp e.d.) gewoon "Wandelroute Explorer" blijven tonen.
+const HOME_SCREEN_TITLE = "Mijnloopje";
 
 export const metadata: Metadata = {
   // Absolute basis-URL voor relatieve afbeeldingen in metadata (bv. og:image).
@@ -26,7 +31,7 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: SITE_TITLE,
+    title: HOME_SCREEN_TITLE,
   },
   // Expliciete Open Graph-tags: zonder deze valt een linkvoorbeeld terug op
   // wat de chat-app zelf uit de pagina raadt (soms niets, soms alleen tekst

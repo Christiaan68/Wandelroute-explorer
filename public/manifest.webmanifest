@@ -1,6 +1,6 @@
 {
   "name": "Wandelroute Explorer",
-  "short_name": "Wandelroute",
+  "short_name": "Mijnloopje",
   "description": "Vind een rondwandeling op jouw gewenste afstand en laat je onderweg begeleiden met gps-navigatie.",
   "start_url": "/",
   "scope": "/",
