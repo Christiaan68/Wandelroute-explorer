@@ -49,6 +49,13 @@ export interface RouteInstruction {
   text: string;
   /** Afstand in meters vanaf dit punt tot de volgende instructie. */
   distanceToNextMeters: number;
+  /**
+   * Straatnaam waar je na deze afslag op terechtkomt, indien bekend bij de
+   * routingdienst (bv. OpenStreetMap-data). `undefined` voor naamloze paden
+   * (bospaden, onbenoemde trage wegen e.d.) — dat komt vaak voor bij
+   * rondwandelingen door natuurgebied.
+   */
+  streetName?: string;
 }
 
 export interface SurfaceBreakdown {

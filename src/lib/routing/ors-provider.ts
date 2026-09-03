@@ -36,6 +36,8 @@ interface OrsFeature {
         duration: number;
         type: number;
         instruction: string;
+        /** Straatnaam volgens ORS/OpenStreetMap; "-" wanneer de weg geen naam heeft. */
+        name: string;
         way_points: [number, number];
       }>;
     }>;
@@ -128,11 +130,15 @@ export class OpenRouteServiceProvider implements RoutingProvider {
     for (const segment of feature.properties.segments ?? []) {
       for (const step of segment.steps ?? []) {
         const maneuver = maneuverFromOrsType(step.type);
+        // ORS geeft "-" terug wanneer de weg/het pad geen naam heeft (komt vaak
+        // voor bij onbenoemde bospaden e.d.) — dat behandelen we als "onbekend".
+        const streetName = step.name && step.name !== "-" ? step.name : undefined;
         instructions.push({
           pointIndex: step.way_points[0],
           maneuver,
           text: maneuverToDutchText(maneuver),
           distanceToNextMeters: step.distance,
+          streetName,
         });
       }
     }

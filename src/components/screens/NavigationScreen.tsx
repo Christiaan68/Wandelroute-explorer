@@ -219,7 +219,11 @@ export function NavigationScreen() {
           const key = `${progress.currentInstructionIndex}-${crossed}`;
           if (!announcedRef.current.has(key)) {
             announcedRef.current.add(key);
-            const text = buildSpokenInstruction(instruction.maneuver, progress.distanceToNextInstructionMeters);
+            const text = buildSpokenInstruction(
+              instruction.maneuver,
+              progress.distanceToNextInstructionMeters,
+              instruction.streetName,
+            );
             if (voiceEnabled && speechGuard.current.shouldSpeak(text)) {
               getVoiceGuide().speak(text);
             }
@@ -336,7 +340,11 @@ export function NavigationScreen() {
 
   const currentInstruction = progress ? activeRoute.instructions[progress.currentInstructionIndex] : undefined;
   const distanceText = progress
-    ? buildSpokenInstruction(currentInstruction?.maneuver ?? "continue", progress.distanceToNextInstructionMeters)
+    ? buildSpokenInstruction(
+        currentInstruction?.maneuver ?? "continue",
+        progress.distanceToNextInstructionMeters,
+        currentInstruction?.streetName,
+      )
     : "Gps-signaal zoeken…";
 
   return (

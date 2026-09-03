@@ -69,8 +69,28 @@ export function formatDistanceForSpeech(distanceMeters: number): string {
   return `over ${km.toString().replace(".", ",")} kilometer`;
 }
 
-/** Volledige gesproken/getoonde instructie zoals gevraagd in de opdracht: "Over 100 meter linksaf". */
-export function buildSpokenInstruction(maneuver: ManeuverType, distanceMeters: number): string {
+/**
+ * Maneuvers waarbij je daadwerkelijk een andere straat/pad in slaat — hier is
+ * een eventuele straatnaam nuttig ("...linksaf, de Betsy Westendorpstraat
+ * in"). Bij "continue"/"roundabout"/"uturn" laten we de naam weg: bij
+ * rechtdoor lopen blijf je vaak (nog) op dezelfde straat, en bij een
+ * rotonde/u-bocht zegt de straatnaam minder dan welke afslag je neemt.
+ */
+const TURN_MANEUVERS = new Set<ManeuverType>([
+  "turn-left",
+  "turn-slight-left",
+  "turn-sharp-left",
+  "turn-right",
+  "turn-slight-right",
+  "turn-sharp-right",
+]);
+
+/**
+ * Volledige gesproken/getoonde instructie zoals gevraagd in de opdracht: "Over
+ * 100 meter linksaf". Als er een straatnaam bekend is voor een afslag, wordt
+ * die toegevoegd: "Over 90 meter linksaf, de Betsy Westendorpstraat in".
+ */
+export function buildSpokenInstruction(maneuver: ManeuverType, distanceMeters: number, streetName?: string): string {
   if (maneuver === "arrive") return "Je hebt je bestemming bereikt";
   if (maneuver === "depart") return "Vertrek en volg de route";
 
@@ -88,8 +108,10 @@ export function buildSpokenInstruction(maneuver: ManeuverType, distanceMeters: n
   };
 
   const action = actionByManeuver[maneuver] ?? "blijf rechtdoor lopen";
+  const streetSuffix = streetName && TURN_MANEUVERS.has(maneuver) ? `, de ${streetName} in` : "";
+
   if (distancePart === "nu") {
-    return maneuver === "continue" ? "Blijf rechtdoor lopen" : `Sla nu ${action}`;
+    return maneuver === "continue" ? "Blijf rechtdoor lopen" : `Sla nu ${action}${streetSuffix}`;
   }
-  return `${distancePart[0]!.toUpperCase()}${distancePart.slice(1)} ${action}`;
+  return `${distancePart[0]!.toUpperCase()}${distancePart.slice(1)} ${action}${streetSuffix}`;
 }
