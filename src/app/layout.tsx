@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { BottomNav } from "@/components/BottomNav";
+import { CopyrightFooter } from "@/components/CopyrightFooter";
 import { ServiceWorkerRegister } from "@/components/ServiceWorkerRegister";
 import "./globals.css";
 
@@ -75,6 +76,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className="flex min-h-dvh flex-col font-sans">
         <ServiceWorkerRegister />
         <div className="flex flex-1 flex-col">{children}</div>
+        <CopyrightFooter />
         <BottomNav />
       </body>
     </html>
