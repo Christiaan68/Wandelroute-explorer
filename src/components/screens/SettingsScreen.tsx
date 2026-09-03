@@ -88,6 +88,8 @@ export function SettingsScreen() {
         </button>
         {cleared && <p className="mt-2 text-sm text-moss-700">Alle lokale gegevens zijn verwijderd.</p>}
       </section>
+
+      <footer className="pb-4 pt-2 text-center text-xs text-bark-700/70">© 2026 I.H.C. ten Haaken</footer>
     </main>
   );
 }
