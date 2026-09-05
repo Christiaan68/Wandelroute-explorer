@@ -28,6 +28,12 @@ export interface MapViewProps {
   className?: string;
   /** Volg automatisch de gebruikerspositie (navigatiemodus) i.p.v. het hele traject te tonen. */
   followUser?: boolean;
+  /**
+   * Id van de actieve route. Gebruikt om te bepalen wanneer het "eerste keer
+   * inzoomen" bij het starten van follow-modus opnieuw moet gebeuren (bv. na
+   * een herberekende route) — zie toelichting bij `hasSetInitialZoomRef`.
+   */
+  routeId?: string;
   fitPadding?: number;
   /** Als aanwezig: kaart is klikbaar om een startpunt te kiezen. */
   onMapClick?: (coordinate: Coordinate) => void;
@@ -47,6 +53,7 @@ export function MapView({
   className,
   followUser = false,
   fitPadding = 48,
+  routeId,
   onMapClick,
 }: MapViewProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -54,6 +61,13 @@ export function MapView({
   const loadedRef = useRef(false);
   const onMapClickRef = useRef(onMapClick);
   onMapClickRef.current = onMapClick;
+  // Zorgt dat we tijdens het volgen van de gebruiker maar ÉÉN keer (per route)
+  // automatisch inzoomen tot minimaal niveau 17. Zonder dit zou elke
+  // gps-update (elke paar seconden) de zoom terugtrekken naar minimaal 17,
+  // waardoor handmatig uitzoomen via de +/- knoppen meteen weer ongedaan
+  // werd gemaakt en het leek alsof die knoppen niet werkten.
+  const hasSetInitialZoomRef = useRef(false);
+  const lastRouteIdRef = useRef<string | undefined>(undefined);
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -120,6 +134,11 @@ export function MapView({
     const map = mapRef.current;
     if (!map || !loadedRef.current) return;
 
+    if (routeId !== lastRouteIdRef.current) {
+      lastRouteIdRef.current = routeId;
+      hasSetInitialZoomRef.current = false;
+    }
+
     (map.getSource(SOURCE_ROUTE) as maplibregl.GeoJSONSource | undefined)?.setData(lineFeature(routeGeometry ?? []));
     (map.getSource(SOURCE_TRAVELED) as maplibregl.GeoJSONSource | undefined)?.setData(
       lineFeature(traveledGeometry ?? []),
@@ -132,15 +151,37 @@ export function MapView({
     );
 
     if (followUser && userPosition) {
-      map.easeTo({
-        center: [userPosition.lng, userPosition.lat],
-        bearing:
-          typeof userHeadingDegrees === "number" && Number.isFinite(userHeadingDegrees)
-            ? userHeadingDegrees
-            : map.getBearing(),
-        zoom: Math.max(map.getZoom(), 17),
-        duration: 400,
-      });
+      // Let op: "??" vangt alleen null/undefined af. Sommige toestellen
+      // geven bij stilstaan/langzaam lopen NaN terug voor de looprichting
+      // i.p.v. null — NaN als bearing laat de camera-berekening van de kaart
+      // stilletjes vastlopen (de kaart schuift dan niet meer mee, ook al
+      // blijft de positiestip zelf gewoon bijwerken). Daarom hier expliciet
+      // op een geldig getal controleren.
+      const bearing =
+        typeof userHeadingDegrees === "number" && Number.isFinite(userHeadingDegrees)
+          ? userHeadingDegrees
+          : map.getBearing();
+
+      if (!hasSetInitialZoomRef.current) {
+        // Eerste keer volgen voor deze route: zoom automatisch in tot
+        // minimaal niveau 17 zodat je meteen goed op straatniveau zit.
+        hasSetInitialZoomRef.current = true;
+        map.easeTo({
+          center: [userPosition.lng, userPosition.lat],
+          bearing,
+          zoom: Math.max(map.getZoom(), 17),
+          duration: 400,
+        });
+      } else {
+        // Daarna het zoomniveau met rust laten: anders zou elke gps-update
+        // een handmatige zoom-actie (de +/- knoppen op de kaart) meteen weer
+        // terugdraaien naar minimaal niveau 17.
+        map.easeTo({
+          center: [userPosition.lng, userPosition.lat],
+          bearing,
+          duration: 400,
+        });
+      }
     } else {
       const all = [...(routeGeometry ?? []), ...(traveledGeometry ?? [])];
       if (all.length > 1) {
@@ -163,6 +204,7 @@ export function MapView({
     userHeadingDegrees,
     followUser,
     fitPadding,
+    routeId,
   ]);
 
   return <div ref={containerRef} className={className ?? "h-full w-full"} role="img" aria-label="Kaart met wandelroute" />;

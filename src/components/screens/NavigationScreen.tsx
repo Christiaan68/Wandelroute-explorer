@@ -372,6 +372,7 @@ export function NavigationScreen() {
             traveledGeometry={progress?.traveled}
             userPosition={currentFix?.coordinate}
             userHeadingDegrees={currentFix?.headingDegrees}
+            routeId={activeRoute.id}
             followUser
           />
         </div>
