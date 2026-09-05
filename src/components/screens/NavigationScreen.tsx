@@ -6,7 +6,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { InstructionBanner } from "@/components/InstructionBanner";
 import { useGeolocation, type GeolocationFix } from "@/hooks/useGeolocation";
 import { useWakeLock } from "@/hooks/useWakeLock";
-import { apiGenerateRoute } from "@/lib/api-client";
+import { apiGenerateReturnRoute } from "@/lib/api-client";
 import { closestPointOnLine, lngLatToCoord } from "@/lib/geo/distance";
 import {
   averageSpeedKmh,
@@ -253,26 +253,20 @@ export function NavigationScreen() {
   }, [voiceEnabled]);
 
   async function handleRecalculate() {
-    if (!context || context === "not-found" || !currentFix || !progress) return;
+    if (!context || context === "not-found" || !currentFix) return;
     setRecalculating(true);
     try {
-      const remainingMeters = Math.max(300, progress.totalDistanceMeters - progress.distanceAlongRouteMeters);
-      const result = await apiGenerateRoute(
-        {
-          start: currentFix.coordinate,
-          targetDistanceMeters: remainingMeters,
-          tolerance: 0.15,
-          surfacePreference: context.surfacePreference,
-          startLabel: "Huidige locatie",
-        },
-        [],
-      );
-      if (result.candidate) {
-        setContext({ ...context, route: result.candidate, start: currentFix.coordinate });
-        offRouteDetector.current.reset();
-        announcedRef.current.clear();
-        setOffRouteWarning(false);
-      }
+      // Route direct terug naar de oorspronkelijk gekozen bestemming (bij een
+      // rondwandeling is dat het startpunt) — NIET een compleet nieuwe
+      // rondwandeling vanaf de huidige positie. Die zou namelijk op de
+      // huidige positie eindigen in plaats van op de plek waar je eigenlijk
+      // naartoe wilde.
+      const destination = context.start;
+      const returnRoute = await apiGenerateReturnRoute(currentFix.coordinate, destination);
+      setContext({ ...context, route: returnRoute, start: currentFix.coordinate });
+      offRouteDetector.current.reset();
+      announcedRef.current.clear();
+      setOffRouteWarning(false);
     } catch (err) {
       console.error("Herberekenen mislukt:", err);
     } finally {
@@ -398,7 +392,7 @@ export function NavigationScreen() {
                 disabled={recalculating}
                 className="tap-target rounded-lg border border-moss-400 px-4 py-2 font-semibold text-moss-700 disabled:opacity-60"
               >
-                {recalculating ? "Nieuwe route berekenen…" : "Bereken nieuwe route naar het vervolg"}
+                {recalculating ? "Route terug naar bestemming berekenen…" : "Bereken route terug naar mijn bestemming"}
               </button>
             </div>
           </div>

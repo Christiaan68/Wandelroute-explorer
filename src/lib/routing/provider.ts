@@ -22,10 +22,23 @@ export interface RoundTripRequest {
   surfacePreference: SurfacePreference;
 }
 
+export interface DirectionsRequest {
+  from: Coordinate;
+  to: Coordinate;
+}
+
 export interface RoutingProvider {
   readonly name: string;
   /** Genereer één rondwandeling-kandidaat die dicht bij targetDistanceMeters uitkomt. */
   generateRoundTrip(request: RoundTripRequest): Promise<RouteCandidate>;
+  /**
+   * Bereken een directe route van punt A naar punt B (geen lus). Gebruikt om
+   * tijdens navigatie terug te routeren naar de oorspronkelijk gekozen
+   * bestemming, bijvoorbeeld nadat iemand van de route is afgeweken — in
+   * tegenstelling tot generateRoundTrip levert dit geen nieuwe, losstaande
+   * lus op vanaf de huidige positie.
+   */
+  generateDirections(request: DirectionsRequest): Promise<RouteCandidate>;
 }
 
 export class RoutingProviderError extends Error {

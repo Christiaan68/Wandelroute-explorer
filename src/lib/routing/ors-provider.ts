@@ -1,7 +1,7 @@
 import type { Coordinate, ElevationInfo, LngLat, RouteCandidate, RouteInstruction, SurfaceBreakdown } from "@/lib/types";
 import { polylineLengthMeters } from "@/lib/geo/distance";
 import { maneuverFromOrsType, maneuverToDutchText } from "@/lib/routing/instruction-text";
-import { RoutingProviderError, type RoundTripRequest, type RoutingProvider } from "@/lib/routing/provider";
+import { RoutingProviderError, type DirectionsRequest, type RoundTripRequest, type RoutingProvider } from "@/lib/routing/provider";
 
 // LET OP: niet "api.openrouteservice.org" gebruiken — dat domein is per
 // 27-08-2026 teruggebracht naar 10% van je quotum en wordt op 28-09-2026
@@ -102,7 +102,50 @@ export class OpenRouteServiceProvider implements RoutingProvider {
     return this.toRouteCandidate(json.features[0]!, request.seed);
   }
 
-  private toRouteCandidate(feature: OrsFeature, seed: number): RouteCandidate {
+  /**
+   * Directe (niet-lus) route tussen twee punten. Gebruikt om tijdens navigatie
+   * terug te routeren naar de oorspronkelijk gekozen bestemming na een
+   * afwijking — geen `round_trip`-optie, dus geen nieuwe losstaande lus.
+   */
+  async generateDirections(request: DirectionsRequest): Promise<RouteCandidate> {
+    const body = {
+      coordinates: [
+        [request.from.lng, request.from.lat],
+        [request.to.lng, request.to.lat],
+      ],
+      instructions: true,
+      instructions_format: "text",
+      elevation: true,
+      extra_info: ["surface", "waytype"],
+    };
+
+    let res: Response;
+    try {
+      res = await fetch(`${ORS_BASE_URL}/v2/directions/${PROFILE}/geojson`, {
+        method: "POST",
+        headers: {
+          Authorization: this.apiKey,
+          "Content-Type": "application/json",
+          Accept: "application/geo+json",
+        },
+        body: JSON.stringify(body),
+        signal: AbortSignal.timeout(15000),
+      });
+    } catch (err) {
+      throw new RoutingProviderError("Kon geen verbinding maken met de routingdienst (openrouteservice).", err);
+    }
+
+    const json = (await res.json().catch(() => null)) as OrsResponse | null;
+
+    if (!res.ok || !json || !json.features?.length) {
+      const message = json?.error?.message ?? `HTTP ${res.status}`;
+      throw new RoutingProviderError(`Routingdienst kon geen route terug naar de bestemming vinden (${message}).`);
+    }
+
+    return this.toRouteCandidate(json.features[0]!, 0, "ors-return");
+  }
+
+  private toRouteCandidate(feature: OrsFeature, seed: number, idPrefix: string = "ors"): RouteCandidate {
     const rawCoords = feature.geometry.coordinates;
     const geometry: LngLat[] = rawCoords.map((c) => [c[0]!, c[1]!]);
 
@@ -114,7 +157,7 @@ export class OpenRouteServiceProvider implements RoutingProvider {
     const elevation = this.extractElevation(feature, rawCoords);
 
     return {
-      id: `ors-${seed}-${Date.now()}`,
+      id: `${idPrefix}-${seed}-${Date.now()}`,
       geometry,
       distanceMeters,
       durationSeconds,
