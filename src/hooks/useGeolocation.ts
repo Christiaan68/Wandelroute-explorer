@@ -47,7 +47,11 @@ export function useGeolocation({ enabled, onPosition }: UseGeolocationOptions): 
         const next: GeolocationFix = {
           coordinate: { lat: position.coords.latitude, lng: position.coords.longitude },
           accuracyMeters: position.coords.accuracy,
-          headingDegrees: position.coords.heading,
+          // Sommige toestellen/browsers geven bij stilstaan of langzaam lopen
+          // NaN terug in plaats van null (bekende eigenaardigheid van de
+          // gps-API). NaN zou verderop de kaart-camera laten vastlopen, dus
+          // behandel het hier expliciet als "geen richting bekend".
+          headingDegrees: Number.isFinite(position.coords.heading) ? position.coords.heading : null,
           speedMps: position.coords.speed,
           timestamp: position.timestamp,
         };

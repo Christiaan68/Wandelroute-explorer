@@ -134,7 +134,10 @@ export function MapView({
     if (followUser && userPosition) {
       map.easeTo({
         center: [userPosition.lng, userPosition.lat],
-        bearing: userHeadingDegrees ?? map.getBearing(),
+        bearing:
+          typeof userHeadingDegrees === "number" && Number.isFinite(userHeadingDegrees)
+            ? userHeadingDegrees
+            : map.getBearing(),
         zoom: Math.max(map.getZoom(), 17),
         duration: 400,
       });
