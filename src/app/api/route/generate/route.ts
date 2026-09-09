@@ -23,6 +23,17 @@ function isValidParams(params: unknown): params is RouteSearchParams {
   );
 }
 
+/**
+ * Normaliseert `avoidTrafficLights` naar een strikte boolean. Bewust
+ * coulant (geen harde validatiefout) als het veld ontbreekt of geen boolean
+ * is: zo blijft een client met een verouderde/gecachte versie van de app
+ * (die dit veld nog niet meestuurt) gewoon werken, met de voorkeur simpelweg
+ * uit.
+ */
+function normalizeAvoidTrafficLights(params: RouteSearchParams): RouteSearchParams {
+  return { ...params, avoidTrafficLights: params.avoidTrafficLights === true };
+}
+
 export async function POST(request: Request) {
   let body: GenerateRouteRequestBody;
   try {
@@ -48,7 +59,7 @@ export async function POST(request: Request) {
     const provider = getRoutingProvider();
     const result = await generateRoute({
       provider,
-      params: body.params,
+      params: normalizeAvoidTrafficLights(body.params),
       rejectedGeometries: body.rejectedGeometries ?? [],
     });
     return NextResponse.json(result);

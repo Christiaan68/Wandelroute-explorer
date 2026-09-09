@@ -26,11 +26,15 @@ export async function apiGenerateRoute(
  * weer naar je eigenlijke doel geleid wordt i.p.v. een compleet nieuwe
  * rondwandeling vanaf je huidige positie te krijgen.
  */
-export async function apiGenerateReturnRoute(from: Coordinate, to: Coordinate): Promise<RouteCandidate> {
+export async function apiGenerateReturnRoute(
+  from: Coordinate,
+  to: Coordinate,
+  avoidTrafficLights: boolean = false,
+): Promise<RouteCandidate> {
   const res = await fetch("/api/route/return", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ from, to }),
+    body: JSON.stringify({ from, to, avoidTrafficLights }),
   });
 
   const json = await res.json().catch(() => null);

@@ -47,10 +47,14 @@ export function NavigationScreen() {
 
   const voiceEnabled = useSettingsStore((s) => s.voiceEnabled);
   const keepAwake = useSettingsStore((s) => s.keepScreenAwakeDuringWalk);
+  const avoidTrafficLights = useSettingsStore((s) => s.avoidTrafficLights);
 
   const [context, setContext] = useState<ActiveWalkContext | null | "not-found">(null);
   const [locationEnabled, setLocationEnabled] = useState(false);
   const [track, setTrack] = useState<LngLat[]>([]);
+  // Toont na een herberekening kort de status van de stoplicht/oversteek-voorkeur
+  // voor de nieuwe route terug naar de bestemming (zie handleRecalculate).
+  const [trafficNotice, setTrafficNotice] = useState<string | null>(null);
   const [currentFix, setCurrentFix] = useState<GeolocationFix | null>(null);
   const [offRouteWarning, setOffRouteWarning] = useState(false);
   const [recalculating, setRecalculating] = useState(false);
@@ -262,11 +266,17 @@ export function NavigationScreen() {
       // huidige positie eindigen in plaats van op de plek waar je eigenlijk
       // naartoe wilde.
       const destination = context.start;
-      const returnRoute = await apiGenerateReturnRoute(currentFix.coordinate, destination);
+      // Voorkeur "vermijd stoplichten en drukke oversteekplaatsen" rechtstreeks
+      // uit de gepersisteerde instelling lezen (i.p.v. door te geven via
+      // ActiveWalkContext): dit is een globale voorkeur van de gebruiker, geen
+      // route-specifiek gegeven, en zo geldt een tussentijdse aan/uit-wijziging
+      // ook meteen bij de volgende herberekening.
+      const returnRoute = await apiGenerateReturnRoute(currentFix.coordinate, destination, avoidTrafficLights);
       setContext({ ...context, route: returnRoute, start: currentFix.coordinate });
       offRouteDetector.current.reset();
       announcedRef.current.clear();
       setOffRouteWarning(false);
+      setTrafficNotice(buildRecalculateTrafficNotice(returnRoute));
     } catch (err) {
       console.error("Herberekenen mislukt:", err);
     } finally {
@@ -398,6 +408,19 @@ export function NavigationScreen() {
             </div>
           </div>
         )}
+
+        {!offRouteWarning && trafficNotice && (
+          <div className="absolute inset-x-0 bottom-24 mx-4 flex items-start gap-2 rounded-xl bg-white p-3 shadow-lg ring-1 ring-moss-200">
+            <p className="flex-1 text-sm text-bark-800">{trafficNotice}</p>
+            <button
+              onClick={() => setTrafficNotice(null)}
+              aria-label="Melding sluiten"
+              className="tap-target rounded-lg px-2 py-1 text-sm font-semibold text-moss-700"
+            >
+              ✕
+            </button>
+          </div>
+        )}
       </div>
 
       <div className="safe-bottom flex items-center justify-between gap-3 border-t border-moss-200 bg-white p-3">
@@ -421,6 +444,39 @@ export function NavigationScreen() {
       </div>
     </main>
   );
+}
+
+/**
+ * Bouwt een korte melding over de stoplicht/oversteek-voorkeur voor een net
+ * herberekende (directe) route terug naar de bestemming. In tegenstelling
+ * tot de rondwandeling-generatie is er hier geen kandidatenpool om uit te
+ * kiezen (zie generateDirections in ors-provider.ts): `avoidanceApplied`
+ * geeft aan of vrijwaringszones daadwerkelijk konden worden toegepast, of dat
+ * openrouteservice daarmee geen route kon vinden en is teruggevallen op de
+ * gewone route.
+ */
+function buildRecalculateTrafficNotice(route: RouteCandidate): string | null {
+  const summary = route.trafficAvoidance;
+  if (!summary || !summary.requested) return null;
+
+  if (!summary.dataComplete) {
+    return "Kaartgegevens over stoplichten/drukke wegen konden niet volledig worden opgehaald; deze route terug naar je bestemming houdt daar dus mogelijk geen rekening mee.";
+  }
+
+  if (summary.trafficLightCount === 0 && summary.majorRoadCrossingCount === 0) {
+    return "Deze route terug naar je bestemming vermijdt stoplichten en grote oversteken, voor zover de kaartgegevens dat konden bepalen.";
+  }
+
+  const parts: string[] = [];
+  if (summary.trafficLightCount > 0) parts.push(`${summary.trafficLightCount} stoplicht${summary.trafficLightCount === 1 ? "" : "en"}`);
+  if (summary.majorRoadCrossingCount > 0) {
+    parts.push(`${summary.majorRoadCrossingCount} gelijkvloerse oversteek${summary.majorRoadCrossingCount === 1 ? "" : "en"}`);
+  }
+
+  if (summary.avoidanceApplied === false) {
+    return `Voor deze route terug naar je bestemming kon geen alternatief gevonden worden dat stoplichten/grote oversteken vermijdt: hij bevat naar schatting ${parts.join(" en ")}.`;
+  }
+  return `Deze route terug naar je bestemming vermijdt niet alles: naar schatting ${parts.join(" en ")} blijven over.`;
 }
 
 function haversineForTrack(a: LngLat, b: LngLat): number {

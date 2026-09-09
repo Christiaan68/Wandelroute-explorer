@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { apiGeocode } from "@/lib/api-client";
 import { getCurrentPositionOnce } from "@/hooks/useGeolocation";
 import { useRouteSearch } from "@/hooks/useRouteSearch";
+import { useSettingsStore } from "@/lib/state/settings-store";
 import { clearActiveWalk, loadActiveWalk, type ActiveWalkSnapshot } from "@/lib/storage/active-walk-journal";
 import type { Coordinate, DistanceTolerance, GeocodeResult, SurfacePreference } from "@/lib/types";
 
@@ -53,6 +54,10 @@ export function SearchScreen() {
   const [distanceInputText, setDistanceInputText] = useState(() => formatDistanceForUnit(5000, "km"));
   const [tolerance, setTolerance] = useState<DistanceTolerance>(0.1);
   const [surfacePreference, setSurfacePreference] = useState<SurfacePreference>("unpaved");
+  // Bewust in de gepersisteerde settings-store i.p.v. lokale component-state:
+  // deze voorkeur moet onthouden worden tussen bezoeken (expliciete eis).
+  const avoidTrafficLights = useSettingsStore((s) => s.avoidTrafficLights);
+  const setAvoidTrafficLights = useSettingsStore((s) => s.setAvoidTrafficLights);
 
   const [startCoordinate, setStartCoordinate] = useState<Coordinate | null>(null);
   const [startLabel, setStartLabel] = useState<string>("");
@@ -136,6 +141,7 @@ export function SearchScreen() {
       start: startCoordinate,
       surfacePreference,
       startLabel: startLabel || "Gekozen startpunt",
+      avoidTrafficLights,
     });
     router.push("/voorstel");
   }
@@ -360,6 +366,27 @@ export function SearchScreen() {
               </label>
             ))}
           </div>
+        </section>
+
+        <section aria-labelledby="stoplichten-label" className="rounded-xl bg-white p-4 shadow-sm ring-1 ring-moss-100">
+          <h2 id="stoplichten-label" className="text-base font-semibold text-moss-800">
+            Stoplichten en oversteekplaatsen
+          </h2>
+          <label className="mt-3 flex cursor-pointer items-start gap-3 rounded-lg border border-moss-100 p-3">
+            <input
+              type="checkbox"
+              checked={avoidTrafficLights}
+              onChange={(e) => setAvoidTrafficLights(e.target.checked)}
+              className="mt-1 h-5 w-5"
+            />
+            <span>
+              <span className="block font-medium text-bark-900">Vermijd stoplichten en drukke oversteekplaatsen</span>
+              <span className="block text-sm text-bark-700">
+                Kies waar mogelijk een route zonder stoplichten en zonder grote wegen over te steken. De route kan
+                hierdoor langer zijn.
+              </span>
+            </span>
+          </label>
         </section>
 
         {formError && (

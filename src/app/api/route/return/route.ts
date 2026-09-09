@@ -12,6 +12,7 @@ import type { Coordinate } from "@/lib/types";
 interface ReturnRouteRequestBody {
   from: Coordinate;
   to: Coordinate;
+  avoidTrafficLights?: boolean;
 }
 
 function isValidCoordinate(value: unknown): value is Coordinate {
@@ -34,7 +35,11 @@ export async function POST(request: Request) {
 
   try {
     const provider = getRoutingProvider();
-    const candidate = await provider.generateDirections({ from: body.from, to: body.to });
+    const candidate = await provider.generateDirections({
+      from: body.from,
+      to: body.to,
+      avoidTrafficLights: body.avoidTrafficLights === true,
+    });
     return NextResponse.json({ candidate });
   } catch (err) {
     if (err instanceof RoutingProviderError) {

@@ -77,6 +77,8 @@ export const usePlannerStore = create<PlannerState>((set, get) => ({
         start: walk.start,
         surfacePreference: walk.surfacePreference,
         startLabel: walk.startLabel,
+        // Eerder opgeslagen wandelingen kennen deze voorkeur nog niet (bestond nog niet toen ze werden opgeslagen).
+        avoidTrafficLights: walk.routeCandidate.trafficAvoidance?.requested ?? false,
       },
       status: "proposal",
       currentCandidate: walk.routeCandidate,

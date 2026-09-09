@@ -1,5 +1,11 @@
 import type { Coordinate, ElevationInfo, LngLat, RouteCandidate, RouteInstruction, SurfaceBreakdown } from "@/lib/types";
-import { polylineLengthMeters } from "@/lib/geo/distance";
+import { haversineDistanceMeters, polylineLengthMeters } from "@/lib/geo/distance";
+import {
+  buildAvoidancePolygons,
+  fetchTrafficAvoidanceData,
+  scoreRouteForTrafficAvoidance,
+  type TrafficAvoidanceData,
+} from "@/lib/geo/traffic-avoidance";
 import { maneuverFromOrsType, maneuverToDutchText } from "@/lib/routing/instruction-text";
 import { RoutingProviderError, type DirectionsRequest, type RoundTripRequest, type RoutingProvider } from "@/lib/routing/provider";
 
@@ -106,9 +112,20 @@ export class OpenRouteServiceProvider implements RoutingProvider {
    * Directe (niet-lus) route tussen twee punten. Gebruikt om tijdens navigatie
    * terug te routeren naar de oorspronkelijk gekozen bestemming na een
    * afwijking — geen `round_trip`-optie, dus geen nieuwe losstaande lus.
+   *
+   * Als `request.avoidTrafficLights` aan staat, is er (in tegenstelling tot
+   * generateRoundTrip) geen kandidatenpool om uit te kiezen: dit is een
+   * directe route van A naar B. In plaats daarvan halen we OSM-gegevens op
+   * over stoplichten/drukke wegen rond de rechte verbinding en geven die als
+   * `avoid_polygons` mee aan openrouteservice — een "beste poging" om de
+   * routeberekening zelf aan te passen (niet alleen achteraf te rapporteren).
+   * Als openrouteservice daarmee geen route kan vinden (bv. de enige
+   * oversteek ligt binnen een vrijwaringszone), valt dit terug op de gewone
+   * route en meldt het resultaat eerlijk dat vermijden niet is gelukt (zie
+   * `trafficAvoidance.avoidanceApplied`).
    */
   async generateDirections(request: DirectionsRequest): Promise<RouteCandidate> {
-    const body = {
+    const baseBody = {
       coordinates: [
         [request.from.lng, request.from.lat],
         [request.to.lng, request.to.lat],
@@ -119,6 +136,79 @@ export class OpenRouteServiceProvider implements RoutingProvider {
       extra_info: ["surface", "waytype"],
     };
 
+    if (!request.avoidTrafficLights) {
+      const feature = await this.requestDirectionsFeature(baseBody);
+      return this.toRouteCandidate(feature, 0, "ors-return");
+    }
+
+    const straightLineMeters = haversineDistanceMeters(request.from, request.to);
+    const center: Coordinate = {
+      lat: (request.from.lat + request.to.lat) / 2,
+      lng: (request.from.lng + request.to.lng) / 2,
+    };
+    const trafficData: TrafficAvoidanceData = await fetchTrafficAvoidanceData(center, straightLineMeters / 2 + 200);
+    const avoidPolygons = buildAvoidancePolygons(request.from, request.to, trafficData);
+
+    let feature: OrsFeature | null = null;
+    let avoidanceApplied = false;
+
+    if (avoidPolygons.length > 0) {
+      try {
+        feature = await this.requestDirectionsFeature({
+          ...baseBody,
+          options: {
+            avoid_polygons: {
+              type: "MultiPolygon",
+              coordinates: avoidPolygons.map((ring) => [ring]),
+            },
+          },
+        });
+        avoidanceApplied = true;
+      } catch {
+        // Vrijwaringszones maakten de route onmogelijk (bv. enige oversteek
+        // zit binnen een zone) -> terugvallen op de gewone route hieronder
+        // i.p.v. helemaal geen route terug te geven.
+        feature = null;
+      }
+    }
+
+    if (!feature) {
+      feature = await this.requestDirectionsFeature(baseBody);
+      avoidanceApplied = false;
+    }
+
+    const candidate = this.toRouteCandidate(feature, 0, "ors-return");
+    const trafficScore = scoreRouteForTrafficAvoidance(candidate.geometry, trafficData);
+
+    let extraDistanceMeters = 0;
+    let extraDurationSeconds = 0;
+    if (avoidanceApplied) {
+      // Ook hier eerlijk de meerkosten tonen: vergelijk met de route die
+      // zonder vrijwaringszones was gekozen.
+      try {
+        const baselineFeature = await this.requestDirectionsFeature(baseBody);
+        const baselineCandidate = this.toRouteCandidate(baselineFeature, 0, "ors-return-baseline");
+        extraDistanceMeters = Math.max(0, Math.round(candidate.distanceMeters - baselineCandidate.distanceMeters));
+        extraDurationSeconds = Math.max(0, Math.round(candidate.durationSeconds - baselineCandidate.durationSeconds));
+      } catch {
+        // Geen vergelijkingsroute kunnen ophalen; extra afstand/tijd blijft onbekend (0 als neutrale waarde).
+      }
+    }
+
+    candidate.trafficAvoidance = {
+      requested: true,
+      trafficLightCount: trafficScore.trafficLightCount,
+      majorRoadCrossingCount: trafficScore.majorRoadCrossingCount,
+      dataComplete: trafficScore.dataComplete,
+      extraDistanceMeters,
+      extraDurationSeconds,
+      avoidanceApplied,
+    };
+
+    return candidate;
+  }
+
+  private async requestDirectionsFeature(body: Record<string, unknown>): Promise<OrsFeature> {
     let res: Response;
     try {
       res = await fetch(`${ORS_BASE_URL}/v2/directions/${PROFILE}/geojson`, {
@@ -142,7 +232,7 @@ export class OpenRouteServiceProvider implements RoutingProvider {
       throw new RoutingProviderError(`Routingdienst kon geen route terug naar de bestemming vinden (${message}).`);
     }
 
-    return this.toRouteCandidate(json.features[0]!, 0, "ors-return");
+    return json.features[0]!;
   }
 
   private toRouteCandidate(feature: OrsFeature, seed: number, idPrefix: string = "ors"): RouteCandidate {

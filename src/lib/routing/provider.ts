@@ -25,6 +25,14 @@ export interface RoundTripRequest {
 export interface DirectionsRequest {
   from: Coordinate;
   to: Coordinate;
+  /**
+   * Voorkeur "vermijd stoplichten en drukke oversteekplaatsen", ook van
+   * toepassing bij het herberekenen van een directe route. Omdat er hier
+   * geen kandidatenpool is om uit te kiezen (zie generateRoundTrip), is dit
+   * een "beste poging" via avoid_polygons — zie generateDirections in
+   * ors-provider.ts en src/lib/geo/traffic-avoidance.ts voor de beperkingen.
+   */
+  avoidTrafficLights?: boolean;
 }
 
 export interface RoutingProvider {

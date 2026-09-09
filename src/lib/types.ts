@@ -26,6 +26,14 @@ export interface RouteSearchParams {
   surfacePreference: SurfacePreference;
   /** Vrije tekst zoals ingevoerd/geselecteerd door de gebruiker (adres of "Huidige locatie"). */
   startLabel: string;
+  /**
+   * Voorkeur "vermijd stoplichten en drukke oversteekplaatsen". Als deze aan
+   * staat, kiest de routegeneratie-engine (zie route-generation/engine.ts)
+   * binnen de kandidaten-pool bewust de route met de minste geschatte
+   * stoplichten/gelijkvloerse grote-weg-oversteken, ook als die net iets
+   * minder goed bij de gevraagde afstand of ondergrondvoorkeur past.
+   */
+  avoidTrafficLights: boolean;
 }
 
 export type ManeuverType =
@@ -69,6 +77,39 @@ export interface ElevationInfo {
   descentMeters: number;
 }
 
+/**
+ * Resultaat van de voorkeur "vermijd stoplichten en drukke oversteekplaatsen"
+ * voor één specifieke route. Wordt alleen meegegeven als de voorkeur
+ * daadwerkelijk was aangevraagd (`requested: true`).
+ */
+export interface TrafficAvoidanceSummary {
+  /** True zodra de gebruiker de voorkeur had aangezet toen deze route werd berekend. */
+  requested: boolean;
+  /** Geschat aantal stoplichten (kruispunt of oversteekplaats) dat de route passeert. */
+  trafficLightCount: number;
+  /** Geschat aantal keer dat de route gelijkvloers een drukke/grote weg oversteekt. */
+  majorRoadCrossingCount: number;
+  /**
+   * False als de onderliggende OpenStreetMap-gegevens niet (volledig) konden
+   * worden opgehaald. In dat geval zijn de tellingen hierboven niet
+   * betrouwbaar en mag de UI nooit beweren dat de route gegarandeerd vrij is
+   * van stoplichten/grote oversteken.
+   */
+  dataComplete: boolean;
+  /** Extra afstand (meters, altijd >= 0) t.o.v. de route die zonder deze voorkeur was gekozen. */
+  extraDistanceMeters: number;
+  /** Extra geschatte looptijd (seconden, altijd >= 0) t.o.v. de route die zonder deze voorkeur was gekozen. */
+  extraDurationSeconds: number;
+  /**
+   * Alleen relevant bij het herberekenen van een directe route (geen
+   * rondwandeling-kandidatenpool om uit te kiezen): true als er
+   * daadwerkelijk vrijwaringszones op de routeberekening zijn toegepast,
+   * false als openrouteservice daarmee geen route kon vinden en is
+   * teruggevallen op de gewone, niet-aangepaste route.
+   */
+  avoidanceApplied?: boolean;
+}
+
 /** Eén door de routing-adapter voorgestelde rondwandeling. */
 export interface RouteCandidate {
   id: string;
@@ -80,6 +121,8 @@ export interface RouteCandidate {
   elevation: ElevationInfo | null;
   /** Interne seed/parameters die tot deze route leidden (voor debugging/telemetrie). */
   generationSeed: number;
+  /** Alleen aanwezig als de voorkeur "vermijd stoplichten en drukke oversteekplaatsen" was aangevraagd. */
+  trafficAvoidance?: TrafficAvoidanceSummary;
 }
 
 /** Metadata die de UI toont naast de kaart. */
