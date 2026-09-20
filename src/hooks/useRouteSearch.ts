@@ -27,7 +27,7 @@ export function useRouteSearch() {
         if (result.candidate) {
           setProposal(result.candidate);
         } else {
-          setNoAlternatives(result.attemptsUsed);
+          setNoAlternatives(result.attemptsUsed, result.reason ?? "no_alternatives");
         }
       } catch (err) {
         setError((err as Error).message);

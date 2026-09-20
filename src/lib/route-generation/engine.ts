@@ -45,6 +45,17 @@ const OVERLAP_REJECT_THRESHOLD = 0.55;
 const TRAFFIC_LIGHT_PENALTY_WEIGHT = 1.5;
 /** Extra "straf" per geschatte gelijkvloerse oversteek van een drukke weg — zwaarder dan een stoplicht, want een stoplicht biedt in elk geval een veilige oversteekplek. */
 const MAJOR_ROAD_CROSSING_PENALTY_WEIGHT = 2.5;
+/**
+ * Aantal opeenvolgende mislukte routingdienst-aanroepen (nog zonder één
+ * geldige kandidaat) waarna we stoppen met verder proberen. Zonder deze
+ * "fail fast" liep je bij een niet-bereikbare/foutieve routingdienst alle
+ * `maxAttempts` pogingen af — elk met een eigen netwerktijdlimiet — voordat
+ * je alsnog "geen route gevonden" te zien kreeg: traag én, belangrijker, een
+ * MISLEIDENDE melding (die suggereert dat er simpelweg geen andere route
+ * bestaat, terwijl de routingdienst zelf het probleem is). Zie
+ * "provider_unavailable" hieronder.
+ */
+const PROVIDER_ERROR_FAIL_FAST_THRESHOLD = 3;
 
 export interface GenerateRouteOptions {
   provider: RoutingProvider;
@@ -54,7 +65,17 @@ export interface GenerateRouteOptions {
   maxAttempts?: number;
 }
 
-export type NoRouteReason = "no_alternatives";
+/**
+ * "no_alternatives": binnen de afstandsmarge en een redelijk aantal pogingen
+ * is geen voldoende verschillende route gevonden (de normale, verwachte
+ * uitkomst als je bv. veel routes bij hetzelfde kleine startpunt afwijst).
+ * "provider_unavailable": de routingdienst zelf gaf herhaaldelijk een fout
+ * (geen verbinding, timeout, foutmelding) VOORDAT ook maar één kandidaat kon
+ * worden gevalideerd — dit ligt niet aan de zoekopdracht en "vergroot de
+ * afstandsmarge" of "pas de ondergrondvoorkeur aan" lossen het dan ook niet
+ * op. De UI moet deze twee gevallen dus met een andere melding tonen.
+ */
+export type NoRouteReason = "no_alternatives" | "provider_unavailable";
 
 export interface GenerateRouteResult {
   candidate: RouteCandidate | null;
@@ -91,6 +112,7 @@ export async function generateRoute(options: GenerateRouteOptions): Promise<Gene
 
   let requestedDistance = params.targetDistanceMeters;
   let attempt = 0;
+  let consecutiveProviderErrors = 0;
 
   while (attempt < maxAttempts && pool.length < DESIRED_POOL_SIZE) {
     const seed = deterministicSeed(attempt);
@@ -108,8 +130,17 @@ export async function generateRoute(options: GenerateRouteOptions): Promise<Gene
     } catch (err) {
       rejectionLog.push(`Poging ${attempt + 1}: routingdienst gaf een fout (${(err as Error).message}).`);
       attempt++;
+      consecutiveProviderErrors++;
+      if (pool.length === 0 && consecutiveProviderErrors >= PROVIDER_ERROR_FAIL_FAST_THRESHOLD) {
+        // De routingdienst zelf lijkt niet bereikbaar of kapot: nog meer
+        // pogingen met dezelfde dienst heeft weinig zin en laat de gebruiker
+        // onnodig lang wachten op een spinner. Stop hier met een duidelijk
+        // andere (eerlijkere) reden dan "no_alternatives".
+        return { candidate: null, attemptsUsed: attempt, reason: "provider_unavailable", rejectionLog };
+      }
       continue;
     }
+    consecutiveProviderErrors = 0;
 
     const deviation = Math.abs(candidate.distanceMeters - params.targetDistanceMeters) / params.targetDistanceMeters;
 

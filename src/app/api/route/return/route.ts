@@ -9,6 +9,13 @@ import type { Coordinate } from "@/lib/types";
  * /api/route/generate levert dit geen nieuwe, losstaande rondwandeling op
  * vanaf de huidige positie.
  */
+
+/**
+ * Zie dezelfde uitleg in /api/route/generate/route.ts. Deze route kan bij
+ * "vermijd stoplichten" tot 3 ORS-aanroepen NA elkaar doen (niet parallel),
+ * dus met wat extra marge op 45s gezet.
+ */
+export const maxDuration = 45;
 interface ReturnRouteRequestBody {
   from: Coordinate;
   to: Coordinate;

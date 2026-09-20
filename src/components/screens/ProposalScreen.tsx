@@ -7,6 +7,7 @@ import { useRouteSearch } from "@/hooks/useRouteSearch";
 import { usePlannerStore } from "@/lib/state/planner-store";
 import { useSettingsStore } from "@/lib/state/settings-store";
 import { getVoiceGuide } from "@/lib/speech/voice";
+import { routeCandidateGpxFileName, routeCandidateToGpx } from "@/lib/gpx/export";
 import { RouteStatsCard } from "@/components/RouteStatsCard";
 import type { DistanceTolerance, SurfacePreference } from "@/lib/types";
 
@@ -25,6 +26,21 @@ export function ProposalScreen() {
   const clearRejectedHistory = usePlannerStore((s) => s.clearRejectedHistory);
   const voiceEnabled = useSettingsStore((s) => s.voiceEnabled);
   const [accepted, setAccepted] = useState(false);
+
+  function handleDownloadGpx() {
+    if (!candidate || !params) return;
+    const blob = new Blob([routeCandidateToGpx(candidate, { startLabel: params.startLabel })], {
+      type: "application/gpx+xml",
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = routeCandidateGpxFileName(params.startLabel);
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  }
 
   if (!params) {
     return (
@@ -117,6 +133,36 @@ export function ProposalScreen() {
     );
   }
 
+  if (status === "provider_unavailable") {
+    return (
+      <main className="mx-auto flex w-full max-w-xl flex-1 flex-col gap-4 p-4">
+        <div className="rounded-xl border border-alert bg-alert-soft p-4">
+          <p className="font-semibold text-bark-900">De routeplanner reageert niet</p>
+          <p className="mt-1 text-sm text-bark-800">
+            Er kon geen contact worden gemaakt met de routingdienst die de wandelroutes berekent. Dit ligt niet aan je
+            zoekopdracht (afstand, startpunt of voorkeuren) — waarschijnlijk is de dienst tijdelijk overbelast of niet
+            bereikbaar. Probeer het over een paar minuten opnieuw.
+          </p>
+        </div>
+
+        <div className="flex flex-col gap-3">
+          <button
+            onClick={() => retryWithParams(params)}
+            className="tap-target rounded-lg bg-moss-600 px-4 py-3 text-left font-semibold text-white"
+          >
+            Probeer opnieuw
+          </button>
+          <button
+            onClick={() => router.push("/")}
+            className="tap-target rounded-lg border border-moss-300 px-4 py-3 text-left font-semibold text-moss-700"
+          >
+            Terug naar zoekscherm
+          </button>
+        </div>
+      </main>
+    );
+  }
+
   if (!candidate) return null;
 
   return (
@@ -127,6 +173,14 @@ export function ProposalScreen() {
 
       <div className="mx-auto flex w-full max-w-xl flex-1 flex-col gap-4 p-4">
         <RouteStatsCard candidate={candidate} />
+
+        <button
+          type="button"
+          onClick={handleDownloadGpx}
+          className="tap-target rounded-lg border border-moss-300 px-4 py-3 text-left font-semibold text-moss-700"
+        >
+          ⬇️ Exporteer deze route als GPX
+        </button>
 
         {!accepted ? (
           <div className="flex flex-col gap-3">

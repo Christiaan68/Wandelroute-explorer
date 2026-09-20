@@ -54,7 +54,22 @@ export interface TrafficAvoidanceScore {
   dataComplete: boolean;
 }
 
-const OVERPASS_ENDPOINT = "https://overpass-api.de/api/interpreter";
+/**
+ * Twee onafhankelijke publieke Overpass-instanties, na elkaar geprobeerd.
+ * BELANGRIJKE LES (2026-09-09): met maar één instance (overpass-api.de) kreeg
+ * de app structureel `dataComplete: false` — de voorkeur "vermijd stoplichten"
+ * werkte daardoor in de praktijk nooit écht, alleen de eerlijke
+ * "kon niet worden opgehaald"-melding. Twee bekende, onafhankelijk beheerde
+ * mirrors (elk met een kort eigen tijdsbudget) verkleinen de kans dat één
+ * overbelaste/traag reagerende gratis server de hele voorkeur onbruikbaar
+ * maakt. Dit lost het probleem niet met 100% zekerheid op (het blijft een
+ * gratis, niet-gegarandeerde publieke dienst) — als het na deze wijziging nog
+ * steeds vaak "onvolledige gegevens" meldt, is dat een signaal om serieus na
+ * te denken over een betaalde/eigen Overpass-instance.
+ */
+const OVERPASS_ENDPOINTS = ["https://overpass-api.de/api/interpreter", "https://overpass.kumi.systems/api/interpreter"];
+/** Tijdsbudget per Overpass-instance (ms). Bewust ruim onder de 30s van `maxDuration` op de API-route, zodat ook bij twee mislukte pogingen de serverless function niet halverwege wordt afgebroken. */
+const OVERPASS_TIMEOUT_MS = 12000;
 /** Maximale straal (meters) rond het startpunt die wordt doorzocht — grotere aanvragen duren te lang/belasten de gratis Overpass-server te veel. */
 const MAX_QUERY_RADIUS_METERS = 4000;
 /** Een stoplicht-knoop binnen deze afstand (meters) van de route telt als "de route passeert dit stoplicht". */
@@ -94,9 +109,11 @@ export async function fetchTrafficAvoidanceData(
   // Drie afzonderlijke way-clausules (unie): wegcategorie, maximumsnelheid of
   // aantal rijstroken — zoals gevraagd ("wegcategorie, maximumsnelheid en
   // aantal rijstroken"). Een way die aan meerdere clausules voldoet wordt
-  // hieronder ontdubbeld op id.
+  // hieronder ontdubbeld op id. [timeout:12] (Overpass-server-side) sluit aan
+  // op OVERPASS_TIMEOUT_MS hieronder, zodat de server niet langer blijft
+  // "hangen" dan waar wij zelf nog op wachten.
   const query = `
-[out:json][timeout:20];
+[out:json][timeout:12];
 (
   node["highway"="traffic_signals"](${bbox});
   node["crossing"="traffic_signals"](${bbox});
@@ -107,24 +124,41 @@ export async function fetchTrafficAvoidanceData(
 out geom;
 `.trim();
 
-  let json: OverpassResponse;
-  try {
-    const res = await fetch(OVERPASS_ENDPOINT, {
-      method: "POST",
-      headers: { "Content-Type": "text/plain" },
-      body: query,
-      signal: AbortSignal.timeout(20000),
-    });
-    if (!res.ok) {
-      return { trafficLightPoints: [], busyRoadWays: [], dataComplete: false };
+  let json: OverpassResponse | null = null;
+
+  // Probeer de mirrors na elkaar: bij een niet-ok status, ongeldig antwoord,
+  // netwerkfout of timeout meteen door naar de volgende, in plaats van meteen
+  // "onvolledige gegevens" te melden na maar één (mogelijk toevallig
+  // overbelaste) server.
+  for (const endpoint of OVERPASS_ENDPOINTS) {
+    try {
+      const res = await fetch(endpoint, {
+        method: "POST",
+        headers: {
+          "Content-Type": "text/plain",
+          // Overpass vereist dit niet zoals Nominatim, maar een herkenbare
+          // User-Agent is beleefd gebruik van een gratis publieke dienst en
+          // helpt bij eventuele blokkades/rate-limiting op basis van anonieme
+          // datacenter-verkeer.
+          "User-Agent": "Mijnloopje/1.0 (wandelroute-app, https://mijnloopje.nl)",
+        },
+        body: query,
+        signal: AbortSignal.timeout(OVERPASS_TIMEOUT_MS),
+      });
+      if (!res.ok) continue;
+      const parsed = (await res.json().catch(() => null)) as OverpassResponse | null;
+      if (!parsed || !Array.isArray(parsed.elements)) continue;
+      json = parsed;
+      break;
+    } catch {
+      // Netwerkfout, timeout, of overbelaste server op deze mirror: probeer
+      // de volgende. Pas als ALLE mirrors mislukken geven we onvolledige data
+      // terug — nooit een verzonnen "geen stoplichten gevonden" resultaat.
+      continue;
     }
-    json = (await res.json().catch(() => null)) as OverpassResponse;
-    if (!json || !Array.isArray(json.elements)) {
-      return { trafficLightPoints: [], busyRoadWays: [], dataComplete: false };
-    }
-  } catch {
-    // Netwerkfout, timeout, of overbelaste Overpass-server: onvolledige data,
-    // nooit een verzonnen "geen stoplichten gevonden" resultaat teruggeven.
+  }
+
+  if (!json) {
     return { trafficLightPoints: [], busyRoadWays: [], dataComplete: false };
   }
 

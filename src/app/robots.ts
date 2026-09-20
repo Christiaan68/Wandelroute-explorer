@@ -12,6 +12,6 @@ export default function robots(): MetadataRoute.Robots {
       allow: "/",
       disallow: "/api/",
     },
-    sitemap: "https://mijnloopje.nl/sitemap.xml",
+    sitemap: "https://www.mijnloopje.nl/sitemap.xml",
   };
 }

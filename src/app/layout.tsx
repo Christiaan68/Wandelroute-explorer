@@ -10,7 +10,7 @@ import "./globals.css";
 // plaats daarvan de systeemfont-stack (tailwind.config.ts), die overal werkt,
 // sneller laadt en geen extra netwerkverzoek kost.
 
-const SITE_URL = "https://mijnloopje.nl";
+const SITE_URL = "https://www.mijnloopje.nl";
 const SITE_TITLE = "Wandelroute Explorer";
 const SITE_DESCRIPTION =
   "Vind een rondwandeling op jouw gewenste afstand en laat je onderweg begeleiden met gps-navigatie.";

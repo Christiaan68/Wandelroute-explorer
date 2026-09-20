@@ -1,7 +1,16 @@
 import { create } from "zustand";
 import type { LngLat, RouteCandidate, RouteSearchParams, WalkRecord } from "@/lib/types";
+import type { NoRouteReason } from "@/lib/route-generation/engine";
 
-export type PlannerStatus = "idle" | "searching" | "proposal" | "no_alternatives" | "error";
+/**
+ * "no_alternatives" en "provider_unavailable" zijn beide "geen route
+ * gevonden"-uitkomsten, maar met een verschillende, eigen oorzaak (zie
+ * NoRouteReason in route-generation/engine.ts) — de UI (ProposalScreen) toont
+ * er daarom ook bewust twee verschillende schermen/meldingen voor, zodat
+ * iemand niet blijft "hangen" in adviezen (afstandsmarge/ondergrond aanpassen)
+ * die bij een niet-bereikbare routingdienst toch niet zouden helpen.
+ */
+export type PlannerStatus = "idle" | "searching" | "proposal" | "no_alternatives" | "provider_unavailable" | "error";
 
 interface PlannerState {
   params: RouteSearchParams | null;
@@ -14,7 +23,7 @@ interface PlannerState {
 
   startSearch: (params: RouteSearchParams) => void;
   setProposal: (candidate: RouteCandidate) => void;
-  setNoAlternatives: (attemptsUsed: number) => void;
+  setNoAlternatives: (attemptsUsed: number, reason: NoRouteReason) => void;
   setError: (message: string) => void;
   rejectCurrentAndSearchAgain: () => void;
   acceptCurrent: () => RouteCandidate | null;
@@ -52,7 +61,12 @@ export const usePlannerStore = create<PlannerState>((set, get) => ({
 
   setProposal: (candidate) => set({ status: "proposal", currentCandidate: candidate, errorMessage: null }),
 
-  setNoAlternatives: (attemptsUsed) => set({ status: "no_alternatives", currentCandidate: null, attemptsUsed }),
+  setNoAlternatives: (attemptsUsed, reason) =>
+    set({
+      status: reason === "provider_unavailable" ? "provider_unavailable" : "no_alternatives",
+      currentCandidate: null,
+      attemptsUsed,
+    }),
 
   setError: (message) => set({ status: "error", errorMessage: message }),
 

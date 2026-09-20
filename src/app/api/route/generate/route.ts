@@ -3,6 +3,17 @@ import { generateRoute } from "@/lib/route-generation/engine";
 import { getRoutingProvider, RoutingProviderError } from "@/lib/routing";
 import type { DistanceTolerance, LngLat, RouteSearchParams, SurfacePreference } from "@/lib/types";
 
+/**
+ * Zonder dit staat Vercel een serverless function maar 10 seconden toe. Deze
+ * route kan (bij meerdere pogingen + het parallel ophalen van
+ * stoplicht-/drukke-weg-gegevens als "vermijd stoplichten" aan staat) langer
+ * duren dan dat — zonder expliciete `maxDuration` zou Vercel de function dan
+ * halverwege afbreken (de browser krijgt dan een onduidelijke 504 in plaats
+ * van onze eigen, begrijpelijke foutmelding). 30s is ruim voldoende voor het
+ * huidige gedrag en werkt op elk Vercel-abonnement (Hobby staat tot 60s toe).
+ */
+export const maxDuration = 30;
+
 interface GenerateRouteRequestBody {
   params: RouteSearchParams;
   rejectedGeometries?: LngLat[][];

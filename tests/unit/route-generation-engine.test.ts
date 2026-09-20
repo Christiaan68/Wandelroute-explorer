@@ -68,6 +68,58 @@ describe("generateRoute — afstandscontrole", () => {
   });
 });
 
+describe("generateRoute — routingdienst niet bereikbaar", () => {
+  it("stopt vroeg met reason 'provider_unavailable' als de routingdienst herhaaldelijk faalt, i.p.v. alle pogingen af te wachten", async () => {
+    const provider: RoutingProvider = {
+      name: "fake",
+      generateRoundTrip: vi.fn(async () => {
+        throw new Error("Kon geen verbinding maken met de routingdienst.");
+      }),
+      generateDirections: vi.fn(async () => makeCandidate({ geometry: LINE_1 })),
+    };
+
+    const result = await generateRoute({
+      provider,
+      params: BASE_PARAMS,
+      rejectedGeometries: [],
+      maxAttempts: 10,
+    });
+
+    expect(result.candidate).toBeNull();
+    expect(result.reason).toBe("provider_unavailable");
+    // Fail-fast: stopt na 3 opeenvolgende fouten, niet na alle 10 toegestane pogingen.
+    expect(result.attemptsUsed).toBe(3);
+    expect(provider.generateRoundTrip).toHaveBeenCalledTimes(3);
+  });
+
+  it("blijft bij 'no_alternatives' zolang de fouten van de routingdienst niet 3x op rij voorkomen (afgewisseld met verworpen kandidaten)", async () => {
+    let calls = 0;
+    const provider: RoutingProvider = {
+      name: "fake",
+      generateRoundTrip: vi.fn(async () => {
+        calls++;
+        // Oneven pogingen: een geslaagd antwoord dat alsnog wordt verworpen
+        // (100% overlap met een eerder afgewezen route). Even pogingen: een
+        // fout — nooit 3x op rij, dus de fail-fast mag niet aanslaan.
+        if (calls % 2 === 1) return makeCandidate({ geometry: LINE_1, distanceMeters: 5000 });
+        throw new Error("routingdienst gaf een fout");
+      }),
+      generateDirections: vi.fn(async () => makeCandidate({ geometry: LINE_1 })),
+    };
+
+    const result = await generateRoute({
+      provider,
+      params: BASE_PARAMS,
+      rejectedGeometries: [LINE_1],
+      maxAttempts: 4,
+    });
+
+    expect(result.candidate).toBeNull();
+    expect(result.reason).toBe("no_alternatives");
+    expect(result.attemptsUsed).toBe(4);
+  });
+});
+
 describe("generateRoute — duplicate-detectie", () => {
   it("geeft no_alternatives als elke kandidaat te veel overlapt met eerder afgewezen routes", async () => {
     const provider: RoutingProvider = {

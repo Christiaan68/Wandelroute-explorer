@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { gpxFileName, walkToGpx } from "@/lib/gpx/export";
-import type { WalkRecord } from "@/lib/types";
+import { gpxFileName, routeCandidateGpxFileName, routeCandidateToGpx, walkToGpx } from "@/lib/gpx/export";
+import type { RouteCandidate, WalkRecord } from "@/lib/types";
 
 const WALK: WalkRecord = {
   id: "walk-gpx-1",
@@ -60,5 +60,46 @@ describe("gpxFileName", () => {
   it("bevat de datum en een deel van het id", () => {
     const name = gpxFileName(WALK);
     expect(name).toBe("wandeling-2026-06-01-walk-gpx.gpx");
+  });
+});
+
+const CANDIDATE: RouteCandidate = {
+  id: "candidate-proposal-1",
+  geometry: [
+    [5.12, 52.09],
+    [5.13, 52.1],
+  ],
+  distanceMeters: 5000,
+  durationSeconds: 3600,
+  instructions: [],
+  surface: { pavedMeters: 0, unpavedMeters: 5000, unknownMeters: 0 },
+  elevation: null,
+  generationSeed: 1,
+};
+
+describe("routeCandidateToGpx", () => {
+  it("produceert geldige GPX met alleen de geplande route (nog geen gelopen traject)", () => {
+    const gpx = routeCandidateToGpx(CANDIDATE, {
+      startLabel: "Teststraat 1, Testdorp",
+      date: new Date("2026-06-01T09:00:00.000Z"),
+    });
+    expect(gpx).toContain('<?xml version="1.0" encoding="UTF-8"?>');
+    expect(gpx).toContain("Geplande route");
+    expect(gpx).not.toContain("Daadwerkelijk gelopen traject");
+    expect(gpx).toContain('lat="52.09"');
+    const trkptCount = (gpx.match(/<trkpt/g) ?? []).length;
+    expect(trkptCount).toBe(2);
+  });
+});
+
+describe("routeCandidateGpxFileName", () => {
+  it("bevat de datum en een leesbare, veilige versie van het startpunt", () => {
+    const name = routeCandidateGpxFileName("Teststraat 1, Testdorp", new Date("2026-06-01T09:00:00.000Z"));
+    expect(name).toBe("wandelroute-2026-06-01-teststraat-1-testdorp.gpx");
+  });
+
+  it("valt terug op een neutrale naam als het startpunt geen bruikbare tekens bevat", () => {
+    const name = routeCandidateGpxFileName("???", new Date("2026-06-01T09:00:00.000Z"));
+    expect(name).toBe("wandelroute-2026-06-01-wandelroute.gpx");
   });
 });
