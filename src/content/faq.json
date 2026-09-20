@@ -1,0 +1,79 @@
+[
+  {
+    "question": "Hoe genereert MijnLoopje een wandelroute?",
+    "answer": "Je kiest een startpunt en de gewenste afstand. MijnLoopje berekent op basis van kaart- en padgegevens van OpenStreetMap, via de routeplanner openrouteservice, een rondwandeling die zo dicht mogelijk bij die afstand uitkomt en weer bij je startpunt eindigt.",
+    "category": "Route en afstand",
+    "order": 1,
+    "published": true
+  },
+  {
+    "question": "Welke afstand kan ik kiezen?",
+    "answer": "Je kiest zelf een afstand tussen 500 meter en 60 kilometer, in kilometers of meters. Daarnaast stel je een toegestane afwijking in (5, 10 of 15%): hoe kleiner die marge, hoe strikter MijnLoopje zoekt naar een route die precies bij je gekozen afstand past.",
+    "category": "Route en afstand",
+    "order": 2,
+    "published": true
+  },
+  {
+    "question": "Wat gebeurt er als er geen route wordt gevonden?",
+    "answer": "Soms lukt het niet om binnen de ingestelde marge een route te vinden die genoeg verschilt van eerder geziene routes, of is de routingdienst tijdelijk niet bereikbaar. MijnLoopje laat dat dan duidelijk zien en geeft opties om verder te zoeken, bijvoorbeeld door de marge te vergroten, de ondergrondvoorkeur aan te passen of het later opnieuw te proberen.",
+    "category": "Route en afstand",
+    "order": 3,
+    "published": true
+  },
+  {
+    "question": "Hoe bepaal ik het startpunt van mijn wandeling?",
+    "answer": "Je gebruikt je huidige locatie, zoekt een adres of plaats op, of kiest handmatig een punt op de kaart.",
+    "category": "Startpunt en locatie",
+    "order": 4,
+    "published": true
+  },
+  {
+    "question": "Moet ik mijn locatie delen om een route te kunnen maken?",
+    "answer": "Alleen als je kiest voor \"Gebruik mijn huidige locatie\". Zoeken op adres of een punt op de kaart kiezen kan zonder gps. Tijdens het wandelen wordt pas om gps-toestemming gevraagd op het moment dat je op \"Nu vertrekken\" drukt, niet eerder.",
+    "category": "Startpunt en locatie",
+    "order": 5,
+    "published": true
+  },
+  {
+    "question": "Wat is het verschil tussen onverhard, gemengd en verhard?",
+    "answer": "Onverhard staat voor paden door bos, veld of langs water, verhard voor asfalt- en tegelpaden, en gemengd is een mix van beide. MijnLoopje houdt bij het genereren van de route rekening met deze voorkeur.",
+    "category": "Routevoorkeuren",
+    "order": 6,
+    "published": true
+  },
+  {
+    "question": "Kan ik stoplichten en drukke oversteekplaatsen vermijden?",
+    "answer": "Ja, met de voorkeur \"Vermijd stoplichten en drukke oversteekplaatsen\" kiest MijnLoopje uit de mogelijke routes bewust de route met de minste stoplichten en gelijkvloerse oversteken van grote wegen, ook als die route iets langer is. Dit is gebaseerd op OpenStreetMap-gegevens; zijn die voor een gebied onvolledig, dan meldt MijnLoopje dat eerlijk in plaats van een garantie te geven die het niet kan waarmaken.",
+    "category": "Routevoorkeuren",
+    "order": 7,
+    "published": true
+  },
+  {
+    "question": "Kan ik een route exporteren, bijvoorbeeld naar een gps-apparaat of andere app?",
+    "answer": "Ja. Je kunt een voorgestelde route al vóór je vertrekt als GPX-bestand exporteren, en na afloop ook de daadwerkelijk gelopen wandeling.",
+    "category": "Onderweg",
+    "order": 8,
+    "published": true
+  },
+  {
+    "question": "Krijg ik onderweg gesproken navigatie-instructies?",
+    "answer": "Als je dat aanzet bij Instellingen, leest MijnLoopje afslag-instructies ook hardop voor tijdens het wandelen.",
+    "category": "Onderweg",
+    "order": 9,
+    "published": true
+  },
+  {
+    "question": "Wat gebeurt er met mijn wandelingen en locatiegegevens?",
+    "answer": "Je wandelgeschiedenis en instellingen worden alleen lokaal op je eigen toestel opgeslagen (in je browser) en niet naar een server verstuurd of daar bewaard, met uitzondering van de routeaanvraag zelf die nodig is om een route te kunnen berekenen. Je kunt al je lokale gegevens op elk moment in één keer verwijderen via Instellingen.",
+    "category": "Privacy en gegevens",
+    "order": 10,
+    "published": true
+  },
+  {
+    "question": "Waar komen de kaart- en padgegevens vandaan?",
+    "answer": "MijnLoopje gebruikt kaart-, pad- en ondergrondgegevens van OpenStreetMap, via de routeplanner openrouteservice. Zoals bij elke bron die door vrijwilligers wordt bijgehouden, kunnen deze gegevens incompleet, onnauwkeurig of verouderd zijn.",
+    "category": "Techniek en bronnen",
+    "order": 11,
+    "published": true
+  }
+]

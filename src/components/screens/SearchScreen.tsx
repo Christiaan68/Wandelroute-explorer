@@ -1,6 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { apiGeocode } from "@/lib/api-client";
@@ -403,6 +404,28 @@ export function SearchScreen() {
           {isLoading ? "Route zoeken…" : "Zoek een wandelroute"}
         </button>
       </form>
+
+      <section aria-labelledby="hoe-werkt-het" className="rounded-xl bg-white p-4 shadow-sm ring-1 ring-moss-100">
+        <h2 id="hoe-werkt-het" className="text-base font-semibold text-moss-800">
+          Hoe MijnLoopje een wandelroute voor je maakt
+        </h2>
+        <p className="mt-2 text-sm text-bark-700">
+          MijnLoopje genereert een rondwandeling die begint en eindigt op het startpunt dat jij kiest: je huidige
+          locatie, een opgezocht adres of een punt op de kaart. Je geeft zelf de gewenste afstand op (van 500 meter tot
+          60 kilometer) en kiest een voorkeur voor onverhard, gemengd of verhard pad. Wil je onderweg zo min mogelijk
+          stoplichten en drukke oversteekplaatsen tegenkomen, dan houdt de routegenerator daar ook rekening mee.
+        </p>
+        <p className="mt-2 text-sm text-bark-700">
+          De route wordt berekend op basis van kaart- en padgegevens van OpenStreetMap. Onderweg kun je gesproken
+          navigatie-instructies aanzetten en de route vooraf of achteraf als GPX-bestand exporteren.
+        </p>
+        <p className="mt-2 text-sm text-bark-700">
+          <Link href="/faq" className="font-semibold text-moss-700 underline">
+            Bekijk de veelgestelde vragen
+          </Link>{" "}
+          voor meer uitleg over afstand, ondergrond en privacy.
+        </p>
+      </section>
     </main>
   );
 }
