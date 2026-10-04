@@ -4,12 +4,15 @@ import { useState } from "react";
 import { useSettingsStore } from "@/lib/state/settings-store";
 import { getWalksRepository } from "@/lib/storage/walks-repository";
 import { clearActiveWalk } from "@/lib/storage/active-walk-journal";
+import { GA_MEASUREMENT_ID } from "@/lib/analytics/ga";
 
 export function SettingsScreen() {
   const voiceEnabled = useSettingsStore((s) => s.voiceEnabled);
   const setVoiceEnabled = useSettingsStore((s) => s.setVoiceEnabled);
   const keepAwake = useSettingsStore((s) => s.keepScreenAwakeDuringWalk);
   const setKeepAwake = useSettingsStore((s) => s.setKeepScreenAwakeDuringWalk);
+  const analyticsConsent = useSettingsStore((s) => s.analyticsConsent);
+  const setAnalyticsConsent = useSettingsStore((s) => s.setAnalyticsConsent);
   const [cleared, setCleared] = useState(false);
 
   async function handleClearAllData() {
@@ -66,8 +69,38 @@ export function SettingsScreen() {
           <li>Locatiegegevens en je wandelgeschiedenis worden alleen lokaal op dit toestel opgeslagen (in je browser) en niet naar externe servers verstuurd of daar bewaard, behalve de routeaanvraag zelf die nodig is om een route te berekenen.</li>
           <li>Gps-toestemming wordt pas gevraagd op het moment dat je op &quot;Nu vertrekken&quot; drukt.</li>
           <li>Je kunt alle lokaal opgeslagen gegevens hieronder in één keer verwijderen.</li>
+          {GA_MEASUREMENT_ID && (
+            <li>
+              Alleen als je daarvoor kiest (zie &quot;Analytics&quot; hieronder) houden we met Google Analytics bij
+              welke schermen worden bezocht, om te zien of MijnLoopje gebruikt wordt. Dit gebeurt geanonimiseerd (geen
+              IP-adres opgeslagen) en zonder advertentiegegevens of koppeling aan je Google-account.
+            </li>
+          )}
         </ul>
       </section>
+
+      {GA_MEASUREMENT_ID && (
+        <section className="rounded-xl bg-white p-4 shadow-sm ring-1 ring-moss-100">
+          <h2 className="text-base font-semibold text-moss-800">Analytics</h2>
+          <label className="mt-3 flex items-center justify-between gap-4">
+            <span>
+              <span className="block font-medium text-bark-900">Toestemming voor Google Analytics</span>
+              <span className="block text-sm text-bark-700">
+                {analyticsConsent === "granted"
+                  ? "Je hebt hiervoor toestemming gegeven."
+                  : "Nog geen toestemming gegeven — er wordt niets gemeten."}
+              </span>
+            </span>
+            <input
+              type="checkbox"
+              checked={analyticsConsent === "granted"}
+              onChange={(e) => setAnalyticsConsent(e.target.checked ? "granted" : "denied")}
+              className="h-6 w-6"
+              aria-label="Toestemming voor Google Analytics aan of uit"
+            />
+          </label>
+        </section>
+      )}
 
       <section className="rounded-xl bg-white p-4 shadow-sm ring-1 ring-moss-100">
         <h2 className="text-base font-semibold text-moss-800">Belangrijk om te weten</h2>

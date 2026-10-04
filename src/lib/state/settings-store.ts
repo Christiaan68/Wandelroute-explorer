@@ -14,10 +14,17 @@ interface SettingsState {
    * niet elke keer opnieuw aan te zetten.
    */
   avoidTrafficLights: boolean;
+  /**
+   * Toestemming voor Google Analytics 4. `null` = nog geen keuze gemaakt (de
+   * toestemmingsbanner in Analytics.tsx wordt dan getoond). Pas bij
+   * "granted" wordt er daadwerkelijk iets van Google geladen.
+   */
+  analyticsConsent: "granted" | "denied" | null;
   setVoiceEnabled: (enabled: boolean) => void;
   setPrivacyAcknowledged: (ack: boolean) => void;
   setKeepScreenAwakeDuringWalk: (enabled: boolean) => void;
   setAvoidTrafficLights: (enabled: boolean) => void;
+  setAnalyticsConsent: (consent: "granted" | "denied") => void;
 }
 
 /**
@@ -32,10 +39,12 @@ export const useSettingsStore = create<SettingsState>()(
       privacyAcknowledged: false,
       keepScreenAwakeDuringWalk: true,
       avoidTrafficLights: false,
+      analyticsConsent: null,
       setVoiceEnabled: (enabled) => set({ voiceEnabled: enabled }),
       setPrivacyAcknowledged: (ack) => set({ privacyAcknowledged: ack }),
       setKeepScreenAwakeDuringWalk: (enabled) => set({ keepScreenAwakeDuringWalk: enabled }),
       setAvoidTrafficLights: (enabled) => set({ avoidTrafficLights: enabled }),
+      setAnalyticsConsent: (consent) => set({ analyticsConsent: consent }),
     }),
     { name: "wandelroute-explorer:settings" },
   ),

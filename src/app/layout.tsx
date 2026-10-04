@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import { Analytics } from "@/components/Analytics";
 import { BottomNav } from "@/components/BottomNav";
 import { CopyrightFooter } from "@/components/CopyrightFooter";
 import { ServiceWorkerRegister } from "@/components/ServiceWorkerRegister";
@@ -78,6 +79,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <div className="flex flex-1 flex-col">{children}</div>
         <CopyrightFooter />
         <BottomNav />
+        <Analytics />
       </body>
     </html>
   );
