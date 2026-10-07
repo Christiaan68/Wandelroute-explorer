@@ -4,17 +4,14 @@ import maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { useEffect, useRef } from "react";
 import type { Coordinate, LngLat } from "@/lib/types";
+import { getMapConfig } from "@/lib/map/map-style";
 
-// Let op: hier bewust "||" i.p.v. "??" gebruiken. Vercel vult bij het
-// importeren van een project alle keys uit .env.example automatisch voor
-// in het environment-variables-formulier — inclusief deze, met een LEGE
-// waarde als je hem niet zelf invult. process.env.NEXT_PUBLIC_MAP_STYLE_URL
-// is dan dus "" (lege string), niet undefined. "??" valt alleen terug bij
-// null/undefined, dus een lege string zou dan als (ongeldige) stijl-URL
-// worden doorgegeven aan MapLibre, met een lege/blanco kaart tot gevolg
-// zonder enige foutmelding. "||" behandelt een lege string ook als "niet
-// ingevuld" en valt dan terecht terug op de standaardwaarde.
-const DEFAULT_STYLE_URL = process.env.NEXT_PUBLIC_MAP_STYLE_URL || "https://tiles.openfreemap.org/styles/liberty";
+// Kaartbron (OSM-standaardkaart of OpenFreeMap) en kaartstijl worden bepaald
+// in src/lib/map/map-style.ts, aan de hand van NEXT_PUBLIC_MAP_PROVIDER en
+// NEXT_PUBLIC_MAP_STYLE_URL. Dat bestand vangt ook het eerdere probleem op
+// met lege env-var-waarden die Vercel automatisch invult (een lege string
+// moet als "niet ingevuld" gelden, anders krijg je een blanco kaart).
+const MAP_CONFIG = getMapConfig();
 
 export interface MapViewProps {
   /** Volledige geplande route (grijs/basislijn), of tijdens navigatie de resterende route. */
@@ -73,10 +70,12 @@ export function MapView({
     if (!containerRef.current) return;
     const map = new maplibregl.Map({
       container: containerRef.current,
-      style: DEFAULT_STYLE_URL,
+      style: MAP_CONFIG.style,
       center: startPoint ? [startPoint.lng, startPoint.lat] : [5.2913, 52.1326],
       zoom: startPoint ? 14 : 6.5,
-      attributionControl: { compact: true },
+      ...(MAP_CONFIG.maxZoom !== undefined ? { maxZoom: MAP_CONFIG.maxZoom } : {}),
+      // OSM eist een duidelijk zichtbare bronvermelding (niet achter een knopje).
+      attributionControl: { compact: MAP_CONFIG.usesCompactAttribution },
     });
     map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "top-right");
     map.on("click", (e) => onMapClickRef.current?.({ lat: e.lngLat.lat, lng: e.lngLat.lng }));
@@ -86,6 +85,16 @@ export function MapView({
       loadedRef.current = true;
 
       map.addSource(SOURCE_ROUTE, { type: "geojson", data: lineFeature([]) });
+      // Witte rand onder de routelijn: de OSM-standaardkaart heeft veel groen
+      // en kleurige vlakken, waar een donkergroene lijn anders slecht
+      // afsteekt.
+      map.addLayer({
+        id: `${SOURCE_ROUTE}-casing`,
+        type: "line",
+        source: SOURCE_ROUTE,
+        paint: { "line-color": "#ffffff", "line-width": 9, "line-opacity": 0.85 },
+        layout: { "line-cap": "round", "line-join": "round" },
+      });
       map.addLayer({
         id: SOURCE_ROUTE,
         type: "line",

@@ -7,8 +7,10 @@ tijdens het wandelen.
 ## Architectuur in het kort
 
 - **Next.js 14 (App Router) + TypeScript**, met Tailwind CSS voor de styling.
-- **Kaart:** [MapLibre GL JS](https://maplibre.org/) met gratis, key-loze
-  vector tiles van [OpenFreeMap](https://openfreemap.org/).
+- **Kaart:** [MapLibre GL JS](https://maplibre.org/) met standaard de gratis,
+  key-loze standaardkaart van [OpenStreetMap](https://www.openstreetmap.org/)
+  (toont kleine paden en stoplichten). Terugschakelen naar de vector tiles van
+  [OpenFreeMap](https://openfreemap.org/) kan via `NEXT_PUBLIC_MAP_PROVIDER=openfreemap`.
 - **Routing:** [openrouteservice](https://openrouteservice.org/) (profiel
   `foot-walking`) achter een eigen adapterlaag
   (`src/lib/routing/provider.ts`). Alle ORS-specifieke request/response-
@@ -67,7 +69,8 @@ copy .env.example .env.local
 | --- | --- |
 | `ROUTING_PROVIDER` | Laat op `ors` staan (enige volledig geïmplementeerde adapter). |
 | `ORS_API_KEY` | Gratis aan te vragen op [openrouteservice.org/dev](https://openrouteservice.org/dev/#/signup) (kies het "Free"-plan, 2000 requests/dag). Server-side variabele; komt nooit in de browser terecht. |
-| `NEXT_PUBLIC_MAP_STYLE_URL` | Kaartstijl (vector tiles). Standaard OpenFreeMap, geen key nodig. |
+| `NEXT_PUBLIC_MAP_PROVIDER` | Kaartbron: `osm` (standaard, OpenStreetMap-standaardkaart) of `openfreemap` (vorige kaart; zo draai je terug). Geen key nodig. |
+| `NEXT_PUBLIC_MAP_STYLE_URL` | Alleen bij `openfreemap`: stijl-URL (vector tiles). Standaard OpenFreeMap Liberty. |
 | `NOMINATIM_CONTACT_EMAIL` | Jouw contact-e-mailadres, verplicht door Nominatim's gebruiksbeleid. |
 
 Zet `.env.local` **nooit** in git — dat gebeurt ook niet, want het staat al in
