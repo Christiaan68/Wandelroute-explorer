@@ -25,15 +25,27 @@ import { bearingDegrees, cumulativeDistances, haversineDistanceMeters, lngLatToC
  * pad zichzelf bij een haarspeldbocht nadert niet onterecht wordt afgewezen.
  */
 
-const SAMPLE_INTERVAL_METERS = 15;
+const SAMPLE_INTERVAL_METERS = 10;
 /** Twee bemonsteringspunten gelden als "dezelfde plek op de kaart" binnen deze afstand. */
-const MATCH_DISTANCE_METERS = 20;
+const MATCH_DISTANCE_METERS = 18;
 /** Vanaf welk koersverschil (graden, 0-180) twee passages als "tegengesteld belopen" gelden. */
 const OPPOSITE_BEARING_MIN_DEGREES = 150;
-/** Twee bemonsteringspunten moeten minstens dit ver uit elkaar liggen qua afgelegde afstand langs de route — anders is het gewoon dezelfde scherpe bocht, belopen in één doorgaande richting. */
-const MIN_PATH_SEPARATION_METERS = 40;
-/** Pas vanaf een aaneengesloten stuk van deze lengte geldt het als een storend heen-en-terug-uitstapje in plaats van ruis of een korte haarspeldbocht. */
-export const MIN_SPUR_LENGTH_METERS = 50;
+/**
+ * Twee bemonsteringspunten moeten minstens dit ver uit elkaar liggen qua
+ * afgelegde afstand langs de route — anders is het gewoon het omslagpunt zelf
+ * van dezelfde scherpe bocht, belopen in één doorgaande richting. Bewust klein
+ * gehouden (iets meer dan 1 bemonsteringsinterval): een eerdere, ruimere
+ * waarde (40m) bleek ook kleine, maar nog duidelijk zichtbare zijpaadjes
+ * (gemeld door Christiaan, ~20-30m) ten onrechte door te laten.
+ */
+const MIN_PATH_SEPARATION_METERS = 20;
+/**
+ * Pas vanaf een aaneengesloten stuk van deze lengte geldt het als een
+ * storend heen-en-terug-uitstapje in plaats van ruis (bv. gps-/kaart-snap-
+ * afwijkingen van een paar meter). Bewust laag gehouden — zie opmerking bij
+ * MIN_PATH_SEPARATION_METERS hierboven.
+ */
+export const MIN_SPUR_LENGTH_METERS = 20;
 
 interface Sample {
   point: LngLat;
