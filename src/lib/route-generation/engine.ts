@@ -1,6 +1,7 @@
 import type { LngLat, RouteCandidate, RouteSearchParams, TrafficAvoidanceSummary } from "@/lib/types";
 import type { RoutingProvider } from "@/lib/routing/provider";
 import { maxOverlapFraction } from "@/lib/routing/similarity";
+import { hasOutAndBackSpur } from "@/lib/routing/out-and-back";
 import {
   fetchTrafficAvoidanceData,
   scoreRouteForTrafficAvoidance,
@@ -15,12 +16,16 @@ import {
  *     het startpunt kiest, zie ORS "round_trip").
  *  2. Vergelijk de afstand met de gewenste afstand; val buiten de marge? Pas
  *     de gevraagde lengte aan (over- of ondercorrigeren) en probeer opnieuw.
- *  3. Val binnen de marge? Bereken de overlapscore t.o.v. reeds afgewezen/
- *     eerder getoonde routes; te veel overlap = duplicaat, probeer opnieuw
+ *  3. Val binnen de marge? Controleer of de route een "heen-en-terug"-stuk
+ *     bevat (een zijpad op lopen en over exact hetzelfde pad teruggaan, zie
+ *     src/lib/routing/out-and-back.ts) — zo ja, afwijzen en opnieuw proberen
  *     met een andere seed/richting.
- *  4. Herhaal tot een pool van kandidaten is verzameld of het maximum aantal
+ *  4. Geen heen-en-terug-stuk? Bereken de overlapscore t.o.v. reeds
+ *     afgewezen/eerder getoonde routes; te veel overlap = duplicaat, probeer
+ *     opnieuw met een andere seed/richting.
+ *  5. Herhaal tot een pool van kandidaten is verzameld of het maximum aantal
  *     pogingen is bereikt.
- *  5. Sorteer de pool op afstandsafwijking, ondergrondvoorkeur-match en
+ *  6. Sorteer de pool op afstandsafwijking, ondergrondvoorkeur-match en
  *     variatie (lage overlap) en geef de beste kandidaat terug.
  *
  * "Geen alternatieven meer" betekent hier expliciet: binnen MAX_ATTEMPTS
@@ -152,6 +157,14 @@ export async function generateRoute(options: GenerateRouteOptions): Promise<Gene
         `Poging ${attempt + 1}: ${Math.round(candidate.distanceMeters)}m ligt buiten de marge van ${Math.round(
           toleranceFraction * 100,
         )}% rond ${Math.round(params.targetDistanceMeters)}m.`,
+      );
+      attempt++;
+      continue;
+    }
+
+    if (hasOutAndBackSpur(candidate.geometry)) {
+      rejectionLog.push(
+        `Poging ${attempt + 1}: route bevat een heen-en-terug-stuk (gaat een zijpad op en terug over hetzelfde pad).`,
       );
       attempt++;
       continue;

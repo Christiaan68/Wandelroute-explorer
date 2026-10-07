@@ -162,6 +162,52 @@ describe("generateRoute — duplicate-detectie", () => {
   });
 });
 
+describe("generateRoute — heen-en-terug-stukken", () => {
+  // Zelfde patroon als tests/unit/out-and-back.test.ts: 100m heen en weer over
+  // exact dezelfde lijn, gevolgd door een gewone lus ver daarvandaan.
+  const SPUR_GEOMETRY: LngLat[] = [
+    [5.0, 52.0],
+    [5.001459, 52.0],
+    [5.0, 52.0],
+    [5.02, 52.02],
+    [5.03, 52.0],
+    [5.0, 52.0],
+  ];
+  const CLEAN_GEOMETRY: LngLat[] = [
+    [5.0, 52.0],
+    [5.02, 52.02],
+    [5.03, 52.0],
+    [5.0, 52.0],
+  ];
+
+  it("verwerpt een kandidaat met een heen-en-terug-zijpad en accepteert de volgende, schone kandidaat", async () => {
+    let calls = 0;
+    const provider: RoutingProvider = {
+      name: "fake",
+      generateRoundTrip: vi.fn(async () => {
+        calls++;
+        return calls === 1
+          ? makeCandidate({ geometry: SPUR_GEOMETRY, distanceMeters: 5000 })
+          : makeCandidate({ geometry: CLEAN_GEOMETRY, distanceMeters: 5000 });
+      }),
+      generateDirections: vi.fn(async () => makeCandidate({ geometry: CLEAN_GEOMETRY })),
+    };
+
+    const result = await generateRoute({
+      provider,
+      params: BASE_PARAMS,
+      rejectedGeometries: [],
+      maxAttempts: 2,
+    });
+
+    expect(result.candidate).not.toBeNull();
+    expect(result.candidate!.geometry).toEqual(CLEAN_GEOMETRY);
+    expect(result.attemptsUsed).toBe(2);
+    expect(result.rejectionLog.length).toBe(1);
+    expect(result.rejectionLog[0]).toMatch(/heen-en-terug/);
+  });
+});
+
 describe("generateRoute — vermijd stoplichten en drukke oversteekplaatsen", () => {
   const EMPTY_DATA: TrafficAvoidanceData = { trafficLightPoints: [], busyRoadWays: [], dataComplete: true };
 
