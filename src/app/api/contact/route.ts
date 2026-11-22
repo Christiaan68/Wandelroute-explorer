@@ -81,7 +81,14 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: result.error }, { status: 400 });
   }
 
-  const { SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, CONTACT_TO } = process.env;
+  // .trim(): een spatie of regeleinde dat per ongeluk mee is geplakt in
+  // Vercel geeft anders een onduidelijke "535 Incorrect authentication data".
+  const env = (key: string) => process.env[key]?.trim() || undefined;
+  const SMTP_HOST = env("SMTP_HOST");
+  const SMTP_PORT = env("SMTP_PORT");
+  const SMTP_USER = env("SMTP_USER");
+  const SMTP_PASS = env("SMTP_PASS");
+  const CONTACT_TO = env("CONTACT_TO");
   if (!SMTP_HOST || !SMTP_USER || !SMTP_PASS) {
     console.error("Contactformulier: SMTP-instellingen ontbreken (SMTP_HOST/SMTP_USER/SMTP_PASS).");
     return NextResponse.json(
