@@ -13,9 +13,9 @@ import faqItems from "@/content/faq.json";
  * voordeel meer op.
  */
 export const metadata: Metadata = {
-  title: "Veelgestelde vragen | MijnLoopje",
+  title: "Veelgestelde vragen | Mijnloopje.nl",
   description:
-    "Antwoorden op veelgestelde vragen over het maken van een wandelroute met MijnLoopje: afstand, startpunt, onverhard of verhard, stoplichten vermijden, gps-navigatie en privacy.",
+    "Antwoorden op veelgestelde vragen over het maken van een wandelroute met Mijnloopje.nl: afstand, startpunt, onverhard of verhard, stoplichten vermijden, gps-navigatie en privacy.",
   alternates: { canonical: "/faq" },
 };
 
@@ -46,7 +46,7 @@ export default function FaqPage() {
       <header className="safe-top pt-2">
         <h1 className="text-2xl font-bold text-moss-800">Veelgestelde vragen</h1>
         <p className="mt-1 text-sm text-bark-700">
-          Alles over het maken van een wandelroute met MijnLoopje: afstand, startpunt, ondergrond, stoplichten
+          Alles over het maken van een wandelroute met Mijnloopje.nl: afstand, startpunt, ondergrond, stoplichten
           vermijden, navigatie en privacy.
         </p>
       </header>

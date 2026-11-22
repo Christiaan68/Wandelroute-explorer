@@ -3,6 +3,7 @@
 import dynamic from "next/dynamic";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { InstructionBanner } from "@/components/InstructionBanner";
 import { useGeolocation, type GeolocationFix } from "@/hooks/useGeolocation";
 import { useWakeLock } from "@/hooks/useWakeLock";
@@ -67,6 +68,7 @@ export function NavigationScreen() {
   const [offRouteWarning, setOffRouteWarning] = useState(false);
   const [recalculating, setRecalculating] = useState(false);
   const [finished, setFinished] = useState(false);
+  const [confirmEndOpen, setConfirmEndOpen] = useState(false);
 
   const offRouteDetector = useRef(new OffRouteDetector(3));
   const speechGuard = useRef(new SpeechRepeatGuard(20000));
@@ -363,7 +365,7 @@ export function NavigationScreen() {
         </p>
         <h1 className="text-xl font-bold text-moss-800">Locatietoegang nodig</h1>
         <p className="max-w-sm text-sm text-bark-700">
-          Wandelroute Explorer gebruikt je live locatie om je tijdens het wandelen te volgen en afslag-instructies te
+          Mijnloopje.nl gebruikt je live locatie om je tijdens het wandelen te volgen en afslag-instructies te
           geven. Je gelopen route wordt alleen op dit toestel opgeslagen. Alleen als je onderweg kiest voor
           &quot;Bereken route terug&quot;, wordt je huidige positie verstuurd om die route te berekenen.
         </p>
@@ -480,16 +482,26 @@ export function NavigationScreen() {
           {voiceEnabled ? "🔊 Spraak aan" : "🔇 Spraak uit"}
         </button>
         <button
-          onClick={() => {
-            if (window.confirm("Wandeling voortijdig beëindigen? Je voortgang tot nu toe wordt opgeslagen.")) {
-              void finishWalk("aborted");
-            }
-          }}
+          onClick={() => setConfirmEndOpen(true)}
           className="tap-target rounded-lg bg-alert px-4 py-2 font-semibold text-white"
         >
           Beëindig wandeling
         </button>
       </div>
+
+      <ConfirmDialog
+        open={confirmEndOpen}
+        title="Wandeling beëindigen?"
+        message="Je voortgang tot nu toe wordt opgeslagen in Mijn wandelingen."
+        confirmLabel="Beëindigen"
+        cancelLabel="Doorwandelen"
+        tone="danger"
+        onCancel={() => setConfirmEndOpen(false)}
+        onConfirm={() => {
+          setConfirmEndOpen(false);
+          void finishWalk("aborted");
+        }}
+      />
     </main>
   );
 }

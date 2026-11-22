@@ -91,7 +91,7 @@ export function Analytics() {
         >
           <div className="mx-auto flex max-w-xl flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <p className="text-sm text-bark-700">
-              Mogen we geanonimiseerd bijhouden hoeveel mensen MijnLoopje gebruiken, via Google Analytics? Dit gebeurt
+              Mogen we geanonimiseerd bijhouden hoeveel mensen Mijnloopje.nl gebruiken, via Google Analytics? Dit gebeurt
               pas na je toestemming.{" "}
               <a href="/instellingen" className="underline">
                 Meer uitleg in Instellingen

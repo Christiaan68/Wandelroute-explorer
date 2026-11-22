@@ -34,7 +34,7 @@ ${trackToXml(walk.actualTrack)}
       : "";
 
   return `<?xml version="1.0" encoding="UTF-8"?>
-<gpx version="1.1" creator="Wandelroute Explorer" xmlns="http://www.topografix.com/GPX/1/1">
+<gpx version="1.1" creator="Mijnloopje.nl" xmlns="http://www.topografix.com/GPX/1/1">
   <metadata>
     <name>${name}</name>
     <time>${walk.date}</time>
@@ -76,7 +76,7 @@ export function routeCandidateToGpx(candidate: RouteCandidate, meta: { startLabe
   const name = escapeXml(`Wandelroute vanaf ${meta.startLabel}`);
 
   return `<?xml version="1.0" encoding="UTF-8"?>
-<gpx version="1.1" creator="Wandelroute Explorer" xmlns="http://www.topografix.com/GPX/1/1">
+<gpx version="1.1" creator="Mijnloopje.nl" xmlns="http://www.topografix.com/GPX/1/1">
   <metadata>
     <name>${name}</name>
     <time>${date.toISOString()}</time>

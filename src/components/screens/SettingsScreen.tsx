@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { useSettingsStore } from "@/lib/state/settings-store";
 import { getWalksRepository } from "@/lib/storage/walks-repository";
 import { clearActiveWalk } from "@/lib/storage/active-walk-journal";
@@ -14,11 +15,10 @@ export function SettingsScreen() {
   const analyticsConsent = useSettingsStore((s) => s.analyticsConsent);
   const setAnalyticsConsent = useSettingsStore((s) => s.setAnalyticsConsent);
   const [cleared, setCleared] = useState(false);
+  const [confirmClearOpen, setConfirmClearOpen] = useState(false);
 
   async function handleClearAllData() {
-    if (!window.confirm("Alle lokaal opgeslagen wandelingen en instellingen verwijderen? Dit kan niet ongedaan worden gemaakt.")) {
-      return;
-    }
+    setConfirmClearOpen(false);
     const walks = await getWalksRepository().getAll();
     await Promise.all(walks.map((w) => getWalksRepository().remove(w.id)));
     clearActiveWalk();
@@ -70,7 +70,7 @@ export function SettingsScreen() {
           <li>
             Om een route te berekenen sturen we het startpunt via onze server naar de routeplanner (openrouteservice).
             Kies je onderweg &quot;Bereken route terug naar mijn bestemming&quot;, dan gaat ook je huidige positie mee.
-            MijnLoopje bewaart deze gegevens niet; ze worden alleen gebruikt om de route te berekenen.
+            Mijnloopje.nl bewaart deze gegevens niet; ze worden alleen gebruikt om de route te berekenen.
           </li>
           <li>
             Een adres dat je intypt, gaat via onze server naar de adreszoeker van OpenStreetMap (Nominatim). De kaart
@@ -82,7 +82,7 @@ export function SettingsScreen() {
           {GA_MEASUREMENT_ID && (
             <li>
               Alleen als je daarvoor kiest (zie &quot;Analytics&quot; hieronder) houden we met Google Analytics bij
-              welke schermen worden bezocht, om te zien of MijnLoopje gebruikt wordt. Dit gebeurt geanonimiseerd (geen
+              welke schermen worden bezocht, om te zien of Mijnloopje.nl gebruikt wordt. Dit gebeurt geanonimiseerd (geen
               IP-adres opgeslagen) en zonder advertentiegegevens of koppeling aan je Google-account.
             </li>
           )}
@@ -126,13 +126,22 @@ export function SettingsScreen() {
       <section className="rounded-xl bg-white p-4 shadow-sm ring-1 ring-moss-100">
         <h2 className="text-base font-semibold text-moss-800">Gegevensbeheer</h2>
         <button
-          onClick={handleClearAllData}
+          onClick={() => setConfirmClearOpen(true)}
           className="tap-target mt-3 rounded-lg border border-alert/40 px-4 py-2 font-semibold text-alert"
         >
           Verwijder alle lokale gegevens
         </button>
         {cleared && <p className="mt-2 text-sm text-moss-700">Alle lokale gegevens zijn verwijderd.</p>}
       </section>
+      <ConfirmDialog
+        open={confirmClearOpen}
+        title="Alle gegevens verwijderen?"
+        message="Al je opgeslagen wandelingen en instellingen op dit toestel worden verwijderd. Dit kan niet ongedaan worden gemaakt."
+        confirmLabel="Verwijderen"
+        tone="danger"
+        onCancel={() => setConfirmClearOpen(false)}
+        onConfirm={() => void handleClearAllData()}
+      />
     </main>
   );
 }

@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { formatDistanceKm, formatDuration } from "@/lib/route-generation/describe";
 import { usePlannerStore } from "@/lib/state/planner-store";
 import { getWalksRepository } from "@/lib/storage/walks-repository";
@@ -11,6 +12,7 @@ export function HistoryScreen() {
   const router = useRouter();
   const resumeFromWalk = usePlannerStore((s) => s.resumeFromWalk);
   const [walks, setWalks] = useState<WalkRecord[] | null>(null);
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
 
   async function refresh() {
     setWalks(await getWalksRepository().getAll());
@@ -21,7 +23,7 @@ export function HistoryScreen() {
   }, []);
 
   async function handleDelete(id: string) {
-    if (!window.confirm("Deze wandeling verwijderen? Dit kan niet ongedaan worden gemaakt.")) return;
+    setPendingDeleteId(null);
     await getWalksRepository().remove(id);
     await refresh();
   }
@@ -85,7 +87,7 @@ export function HistoryScreen() {
                 Opnieuw wandelen
               </button>
               <button
-                onClick={() => handleDelete(walk.id)}
+                onClick={() => setPendingDeleteId(walk.id)}
                 className="tap-target rounded-lg border border-alert/40 px-3 py-2 text-sm font-semibold text-alert"
               >
                 Verwijderen
@@ -94,6 +96,17 @@ export function HistoryScreen() {
           </li>
         ))}
       </ul>
+      <ConfirmDialog
+        open={pendingDeleteId !== null}
+        title="Wandeling verwijderen?"
+        message="Deze wandeling wordt van dit toestel verwijderd. Dit kan niet ongedaan worden gemaakt."
+        confirmLabel="Verwijderen"
+        tone="danger"
+        onCancel={() => setPendingDeleteId(null)}
+        onConfirm={() => {
+          if (pendingDeleteId) void handleDelete(pendingDeleteId);
+        }}
+      />
     </main>
   );
 }

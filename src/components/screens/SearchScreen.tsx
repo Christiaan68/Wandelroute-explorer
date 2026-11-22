@@ -150,7 +150,7 @@ export function SearchScreen() {
   return (
     <main className="mx-auto flex w-full max-w-xl flex-1 flex-col gap-6 p-4 pb-8">
       <header className="safe-top pt-2">
-        <h1 className="text-2xl font-bold text-moss-800">Wandelroute Explorer</h1>
+        <h1 className="text-2xl font-bold text-moss-800">Mijnloopje.nl</h1>
         <p className="mt-1 text-sm text-bark-700">Vind een rondwandeling op de afstand die jij kiest.</p>
       </header>
 
@@ -407,10 +407,10 @@ export function SearchScreen() {
 
       <section aria-labelledby="hoe-werkt-het" className="rounded-xl bg-white p-4 shadow-sm ring-1 ring-moss-100">
         <h2 id="hoe-werkt-het" className="text-base font-semibold text-moss-800">
-          Hoe MijnLoopje een wandelroute voor je maakt
+          Hoe Mijnloopje.nl een wandelroute voor je maakt
         </h2>
         <p className="mt-2 text-sm text-bark-700">
-          MijnLoopje genereert een rondwandeling die begint en eindigt op het startpunt dat jij kiest: je huidige
+          Mijnloopje.nl genereert een rondwandeling die begint en eindigt op het startpunt dat jij kiest: je huidige
           locatie, een opgezocht adres of een punt op de kaart. Je geeft zelf de gewenste afstand op (van 500 meter tot
           60 kilometer) en kiest een voorkeur voor onverhard, gemengd of verhard pad. Wil je onderweg zo min mogelijk
           stoplichten en drukke oversteekplaatsen tegenkomen, dan houdt de routegenerator daar ook rekening mee.

@@ -12,13 +12,14 @@ import "./globals.css";
 // sneller laadt en geen extra netwerkverzoek kost.
 
 const SITE_URL = "https://www.mijnloopje.nl";
-const SITE_TITLE = "Wandelroute Explorer";
+// Merknaam: overal "Mijnloopje.nl" (besluit Christiaan, 2026-11-22).
+const SITE_TITLE = "Mijnloopje.nl";
 const SITE_DESCRIPTION =
   "Vind een rondwandeling op jouw gewenste afstand en laat je onderweg begeleiden met gps-navigatie.";
 // Naam die iOS Safari voorstelt (en die je nog kunt aanpassen) bij "Zet op
 // beginscherm" — dit is wat er onder het app-icoon op het beginscherm komt te
-// staan. Los van SITE_TITLE gehouden zodat de paginatitel/linkvoorbeelden
-// (browsertab, WhatsApp e.d.) gewoon "Wandelroute Explorer" blijven tonen.
+// staan. Bewust zonder ".nl": iOS kort namen langer dan ~12 tekens onder het
+// icoon af met "…". Zelfde waarde als short_name in public/manifest.webmanifest.
 const HOME_SCREEN_TITLE = "Mijnloopje";
 
 export const metadata: Metadata = {
