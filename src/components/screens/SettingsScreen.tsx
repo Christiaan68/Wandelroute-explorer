@@ -77,6 +77,10 @@ export function SettingsScreen() {
             wordt rechtstreeks geladen van de servers van OpenStreetMap; die zien daarbij je IP-adres en welk
             kaartgebied je bekijkt.
           </li>
+          <li>
+            Gebruik je het contactformulier, dan gaan je naam, e-mailadres en bericht alleen per e-mail naar de
+            beheerder, om je vraag te beantwoorden. Ze worden niet op de website opgeslagen.
+          </li>
           <li>Gps-toestemming wordt pas gevraagd als je op &quot;Gebruik mijn huidige locatie&quot; of op &quot;Nu vertrekken&quot; drukt.</li>
           <li>Je kunt alle lokaal opgeslagen gegevens hieronder in één keer verwijderen.</li>
           {GA_MEASUREMENT_ID && (

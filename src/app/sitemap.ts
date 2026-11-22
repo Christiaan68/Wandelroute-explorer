@@ -2,7 +2,7 @@ import type { MetadataRoute } from "next";
 
 /**
  * Genereert automatisch /sitemap.xml (Next.js-conventie). Alleen publieke,
- * indexeerbare content staat hierin: de homepage en de FAQ. De overige
+ * indexeerbare content staat hierin: de homepage, de FAQ en de contactpagina. De overige
  * schermen (/voorstel, /navigeren, /samenvatting, /geschiedenis,
  * /instellingen) zijn onderdelen van de app-flow of persoonlijke gegevens en
  * hebben een noindex-tag (zie die pagina's), dus die horen hier niet in.
@@ -19,6 +19,9 @@ export default function sitemap(): MetadataRoute.Sitemap {
     },
     {
       url: "https://www.mijnloopje.nl/faq",
+    },
+    {
+      url: "https://www.mijnloopje.nl/contact",
     },
   ];
 }

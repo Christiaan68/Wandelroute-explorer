@@ -23,7 +23,10 @@
  */
 const contentSecurityPolicy = [
   "default-src 'self'",
-  "script-src 'self' 'unsafe-inline' https://www.googletagmanager.com",
+  // 'unsafe-eval' ALLEEN bij lokaal ontwikkelen (npm run dev): de
+  // ontwikkelmodus van Next.js gebruikt eval voor het live herladen; zonder
+  // deze uitzondering werkt de site lokaal niet. De live site krijgt hem niet.
+  `script-src 'self' 'unsafe-inline'${process.env.NODE_ENV === "production" ? "" : " 'unsafe-eval'"} https://www.googletagmanager.com`,
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob: https://tile.openstreetmap.org https://tiles.openfreemap.org https://*.google-analytics.com https://*.googletagmanager.com",
   "font-src 'self' data: https://tiles.openfreemap.org",

@@ -17,6 +17,10 @@ export function CopyrightFooter() {
       <Link href="/faq" className="underline">
         Veelgestelde vragen
       </Link>{" "}
+      ·{" "}
+      <Link href="/contact" className="underline">
+        Contact
+      </Link>{" "}
       · © 2026 I.H.C. ten Haaken
     </p>
   );

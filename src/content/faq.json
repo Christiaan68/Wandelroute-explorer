@@ -64,7 +64,7 @@
   },
   {
     "question": "Wat gebeurt er met mijn wandelingen en locatiegegevens?",
-    "answer": "Je wandelgeschiedenis, gelopen routes en instellingen worden alleen lokaal op je eigen toestel opgeslagen (in je browser). Om een route te berekenen sturen we het startpunt via onze server naar de routeplanner (openrouteservice); kies je onderweg \"Bereken route terug naar mijn bestemming\", dan gaat ook je huidige positie mee. Mijnloopje.nl bewaart deze gegevens niet. Adressen die je intypt gaan via onze server naar de adreszoeker van OpenStreetMap, en de kaart wordt geladen van de servers van OpenStreetMap, die daarbij je IP-adres zien. Je kunt al je lokale gegevens op elk moment in één keer verwijderen via Instellingen.",
+    "answer": "Je wandelgeschiedenis, gelopen routes en instellingen worden alleen lokaal op je eigen toestel opgeslagen (in je browser). Om een route te berekenen sturen we het startpunt via onze server naar de routeplanner (openrouteservice); kies je onderweg \"Bereken route terug naar mijn bestemming\", dan gaat ook je huidige positie mee. Mijnloopje.nl bewaart deze gegevens niet. Adressen die je intypt gaan via onze server naar de adreszoeker van OpenStreetMap, en de kaart wordt geladen van de servers van OpenStreetMap, die daarbij je IP-adres zien. Gebruik je het contactformulier, dan gaan je naam, e-mailadres en bericht alleen per e-mail naar de beheerder en worden ze niet op de website opgeslagen. Je kunt al je lokale gegevens op elk moment in één keer verwijderen via Instellingen.",
     "category": "Privacy en gegevens",
     "order": 10,
     "published": true
