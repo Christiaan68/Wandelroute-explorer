@@ -22,6 +22,12 @@ function buildRouteDescription(candidate: RouteCandidate, pavedFraction: number,
   if (unpavedFraction >= 0.7) surfacePart = "grotendeels over onverharde paden";
   else if (pavedFraction >= 0.7) surfacePart = "grotendeels over verharde paden";
   else if (unpavedFraction + pavedFraction < 0.2) surfacePart = "over paden waarvan de ondergrond niet goed bekend is";
+  // Veel "onbekend" kan een route met nauwelijks onverhard ten onrechte als
+  // "mix" laten klinken (test 2026-11-22: 5% onverhard, 61% verhard, 34%
+  // onbekend werd "mix"). Daarom ook kijken naar de verhouding tussen de
+  // bekende delen.
+  else if (pavedFraction >= 0.5 && unpavedFraction < 0.2) surfacePart = "voornamelijk over verharde paden";
+  else if (unpavedFraction >= 0.5 && pavedFraction < 0.2) surfacePart = "voornamelijk over onverharde paden";
   else surfacePart = "over een mix van verharde en onverharde paden";
 
   let elevationPart = "";

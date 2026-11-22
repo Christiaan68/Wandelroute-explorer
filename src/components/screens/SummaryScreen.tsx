@@ -95,7 +95,7 @@ export function SummaryScreen() {
           <Stat label="Gelopen afstand" value={formatDistanceKm(walk.actualDistanceMeters)} />
           <Stat label="Geplande afstand" value={formatDistanceKm(walk.plannedDistanceMeters)} />
           <Stat label="Totale tijd" value={formatDuration(walk.durationSeconds)} />
-          <Stat label="Gem. snelheid" value={`${walk.averageSpeedKmh.toFixed(1)} km/u`} />
+          <Stat label="Gem. snelheid" value={`${walk.averageSpeedKmh.toFixed(1).replace(".", ",")} km/u`} />
         </div>
 
         {Math.abs(distanceDelta) > 100 && (
@@ -137,7 +137,7 @@ export function SummaryScreen() {
 function Stat({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <dt className="text-xs uppercase tracking-wide text-bark-700/70">{label}</dt>
+      <dt className="text-xs uppercase tracking-wide text-bark-700">{label}</dt>
       <dd className="text-lg font-bold text-moss-800">{value}</dd>
     </div>
   );

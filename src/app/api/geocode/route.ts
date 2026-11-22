@@ -41,10 +41,19 @@ export async function GET(request: Request) {
     }
 
     const data = (await res.json()) as Array<{ display_name: string; lat: string; lon: string }>;
-    const results: GeocodeResult[] = data.map((item) => ({
-      label: item.display_name,
-      coordinate: { lat: parseFloat(item.lat), lng: parseFloat(item.lon) },
-    }));
+    // Nominatim geeft soms meerdere resultaten met exact dezelfde naam (bv.
+    // verschillende ingangen van één station); die tonen we maar één keer.
+    const seen = new Set<string>();
+    const results: GeocodeResult[] = data
+      .filter((item) => {
+        if (seen.has(item.display_name)) return false;
+        seen.add(item.display_name);
+        return true;
+      })
+      .map((item) => ({
+        label: item.display_name,
+        coordinate: { lat: parseFloat(item.lat), lng: parseFloat(item.lon) },
+      }));
 
     return NextResponse.json({ results });
   } catch (err) {

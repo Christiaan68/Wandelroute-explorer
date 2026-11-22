@@ -28,7 +28,7 @@ export function BottomNav() {
                 href={item.href}
                 aria-current={active ? "page" : undefined}
                 className={`tap-target flex flex-col items-center justify-center gap-0.5 py-2 text-xs font-medium ${
-                  active ? "text-moss-700" : "text-bark-700/70"
+                  active ? "text-moss-700" : "text-bark-700"
                 }`}
               >
                 <span aria-hidden className="text-lg leading-none">

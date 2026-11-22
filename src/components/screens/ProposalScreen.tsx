@@ -217,7 +217,7 @@ export function ProposalScreen() {
       </div>
 
       <div className="mx-auto flex w-full max-w-xl flex-1 flex-col gap-4 p-4">
-        <RouteStatsCard candidate={candidate} />
+        <RouteStatsCard candidate={candidate} surfacePreference={params.surfacePreference} />
 
         <button
           type="button"

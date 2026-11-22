@@ -1,4 +1,4 @@
-import type { RouteCandidate } from "@/lib/types";
+import type { RouteCandidate, SurfacePreference } from "@/lib/types";
 import { formatDistanceKm, formatDuration, toRouteSummaryView } from "@/lib/route-generation/describe";
 
 interface TrafficAvoidanceNotice {
@@ -52,16 +52,50 @@ function describeTrafficAvoidance(candidate: RouteCandidate): TrafficAvoidanceNo
   };
 }
 
-export function RouteStatsCard({ candidate }: { candidate: RouteCandidate }) {
+/**
+ * Melding als de gekozen ondergrondvoorkeur duidelijk niet gehaald is. De
+ * routeplanner kan in bv. een stadscentrum simpelweg geen onverharde paden
+ * vinden; dan is het eerlijker dat te zeggen dan stilzwijgend een verharde
+ * route te tonen. Alleen bij "onverhard" en "verhard": "gemengd" kan niet
+ * echt mislukken.
+ */
+export function describeSurfaceMismatch(
+  preference: SurfacePreference | undefined,
+  pavedFraction: number,
+  unpavedFraction: number,
+): string | null {
+  const unpavedPct = Math.round(unpavedFraction * 100);
+  const pavedPct = Math.round(pavedFraction * 100);
+  if (preference === "unpaved" && unpavedFraction < 0.4 && pavedFraction > unpavedFraction) {
+    return `Je koos voor onverhard, maar hier vond de routeplanner vooral verharde paden (${unpavedPct}% onverhard). Kies eventueel een startpunt dichter bij bos of natuurgebied.`;
+  }
+  if (preference === "paved" && pavedFraction < 0.4 && unpavedFraction > pavedFraction) {
+    return `Je koos voor verhard, maar hier vond de routeplanner vooral onverharde paden (${pavedPct}% verhard).`;
+  }
+  return null;
+}
+
+export function RouteStatsCard({
+  candidate,
+  surfacePreference,
+}: {
+  candidate: RouteCandidate;
+  surfacePreference?: SurfacePreference;
+}) {
   const view = toRouteSummaryView(candidate);
   const pavedPct = Math.round(view.pavedFraction * 100);
   const unpavedPct = Math.round(view.unpavedFraction * 100);
   const unknownPct = Math.max(0, 100 - pavedPct - unpavedPct);
   const trafficNotice = describeTrafficAvoidance(candidate);
+  const surfaceNotice = describeSurfaceMismatch(surfacePreference, view.pavedFraction, view.unpavedFraction);
 
   return (
     <div className="rounded-xl bg-white p-4 shadow-sm ring-1 ring-moss-100">
       <p className="text-sm text-bark-700">{view.description}</p>
+
+      {surfaceNotice && (
+        <p className="mt-2 rounded-lg bg-alert-soft px-3 py-2 text-sm text-bark-900">⚠️ {surfaceNotice}</p>
+      )}
 
       {candidate.outAndBackMeters !== undefined && (
         <p className="mt-2 rounded-lg bg-alert-soft px-3 py-2 text-sm text-bark-900">
@@ -83,21 +117,21 @@ export function RouteStatsCard({ candidate }: { candidate: RouteCandidate }) {
 
       <dl className="mt-3 grid grid-cols-2 gap-3">
         <div>
-          <dt className="text-xs uppercase tracking-wide text-bark-700/70">Afstand</dt>
+          <dt className="text-xs uppercase tracking-wide text-bark-700">Afstand</dt>
           <dd className="text-xl font-bold text-moss-800">{formatDistanceKm(view.distanceMeters)}</dd>
         </div>
         <div>
-          <dt className="text-xs uppercase tracking-wide text-bark-700/70">Geschatte tijd</dt>
+          <dt className="text-xs uppercase tracking-wide text-bark-700">Geschatte tijd</dt>
           <dd className="text-xl font-bold text-moss-800">{formatDuration(view.durationSeconds)}</dd>
         </div>
         {view.elevation && (
           <div className="col-span-2 flex gap-4">
             <div>
-              <dt className="text-xs uppercase tracking-wide text-bark-700/70">Stijgen</dt>
+              <dt className="text-xs uppercase tracking-wide text-bark-700">Stijgen</dt>
               <dd className="font-semibold text-bark-900">↗ {Math.round(view.elevation.ascentMeters)} m</dd>
             </div>
             <div>
-              <dt className="text-xs uppercase tracking-wide text-bark-700/70">Dalen</dt>
+              <dt className="text-xs uppercase tracking-wide text-bark-700">Dalen</dt>
               <dd className="font-semibold text-bark-900">↘ {Math.round(view.elevation.descentMeters)} m</dd>
             </div>
           </div>
@@ -105,7 +139,7 @@ export function RouteStatsCard({ candidate }: { candidate: RouteCandidate }) {
       </dl>
 
       <div className="mt-4">
-        <p className="text-xs uppercase tracking-wide text-bark-700/70">Ondergrond</p>
+        <p className="text-xs uppercase tracking-wide text-bark-700">Ondergrond</p>
         <div className="mt-1 flex h-3 w-full overflow-hidden rounded-full bg-moss-100" role="img" aria-label={`${unpavedPct}% onverhard, ${pavedPct}% verhard`}>
           {unpavedPct > 0 && <div style={{ width: `${unpavedPct}%` }} className="h-full bg-trail-unpaved" />}
           {pavedPct > 0 && <div style={{ width: `${pavedPct}%` }} className="h-full bg-trail-paved" />}

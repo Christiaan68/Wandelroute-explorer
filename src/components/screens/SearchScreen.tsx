@@ -250,7 +250,7 @@ export function SearchScreen() {
               ))}
             </div>
           </div>
-          <p className="mt-2 text-xs text-bark-700/70">
+          <p className="mt-2 text-xs text-bark-700">
             Bijvoorbeeld 3750 m: kies &quot;m&quot; als eenheid en typ 3750 in.
           </p>
 

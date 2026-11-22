@@ -13,7 +13,7 @@ export function CopyrightFooter() {
   if (pathname?.startsWith("/navigeren")) return null;
 
   return (
-    <p className="py-1 text-center text-[11px] text-bark-700/70">
+    <p className="py-1 text-center text-[11px] text-bark-700">
       <Link href="/faq" className="underline">
         Veelgestelde vragen
       </Link>{" "}
