@@ -66,8 +66,18 @@ export function SettingsScreen() {
         <h2 className="text-base font-semibold text-moss-800">Privacy &amp; locatiegegevens</h2>
         <ul className="mt-2 flex list-disc flex-col gap-2 pl-5 text-sm text-bark-700">
           <li>Je locatie wordt alleen gebruikt om je positie op de kaart te tonen en afslag-instructies te geven.</li>
-          <li>Locatiegegevens en je wandelgeschiedenis worden alleen lokaal op dit toestel opgeslagen (in je browser) en niet naar externe servers verstuurd of daar bewaard, behalve de routeaanvraag zelf die nodig is om een route te berekenen.</li>
-          <li>Gps-toestemming wordt pas gevraagd op het moment dat je op &quot;Nu vertrekken&quot; drukt.</li>
+          <li>Je wandelgeschiedenis, gelopen routes en instellingen worden alleen lokaal op dit toestel opgeslagen (in je browser).</li>
+          <li>
+            Om een route te berekenen sturen we het startpunt via onze server naar de routeplanner (openrouteservice).
+            Kies je onderweg &quot;Bereken route terug naar mijn bestemming&quot;, dan gaat ook je huidige positie mee.
+            MijnLoopje bewaart deze gegevens niet; ze worden alleen gebruikt om de route te berekenen.
+          </li>
+          <li>
+            Een adres dat je intypt, gaat via onze server naar de adreszoeker van OpenStreetMap (Nominatim). De kaart
+            wordt rechtstreeks geladen van de servers van OpenStreetMap; die zien daarbij je IP-adres en welk
+            kaartgebied je bekijkt.
+          </li>
+          <li>Gps-toestemming wordt pas gevraagd als je op &quot;Gebruik mijn huidige locatie&quot; of op &quot;Nu vertrekken&quot; drukt.</li>
           <li>Je kunt alle lokaal opgeslagen gegevens hieronder in één keer verwijderen.</li>
           {GA_MEASUREMENT_ID && (
             <li>
@@ -88,7 +98,9 @@ export function SettingsScreen() {
               <span className="block text-sm text-bark-700">
                 {analyticsConsent === "granted"
                   ? "Je hebt hiervoor toestemming gegeven."
-                  : "Nog geen toestemming gegeven — er wordt niets gemeten."}
+                  : analyticsConsent === "denied"
+                    ? "Je hebt geen toestemming gegeven — er wordt niets gemeten."
+                    : "Je hebt nog geen keuze gemaakt — er wordt niets gemeten."}
               </span>
             </span>
             <input

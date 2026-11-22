@@ -31,12 +31,14 @@ function describeNoRoute(counts: RejectionCounts | null, hasSeenRoutes: boolean)
   if (!counts) return `${base} Probeer een andere instelling of een ander startpunt.`;
 
   const reasons: string[] = [];
-  if (counts.outsideDistanceMargin > 0) reasons.push("de routes werden te lang of te kort voor de gekozen afstandsmarge");
-  if (counts.tooSimilar > 0) reasons.push("de routes leken te veel op routes die je al hebt gezien");
-  if (counts.outAndBack > 0) reasons.push("de routes gingen grotendeels over hetzelfde pad heen en terug");
+  if (counts.outsideDistanceMargin > 0) reasons.push("waren te lang of te kort voor de gekozen afstandsmarge");
+  if (counts.tooSimilar > 0) reasons.push("leken te veel op routes die je al hebt gezien");
+  if (counts.outAndBack > 0) reasons.push("gingen voor een te groot deel over hetzelfde pad heen en terug");
   if (reasons.length === 0) return `${base} Probeer een andere instelling of een ander startpunt.`;
 
-  return `${base} Bij de pogingen die zijn gedaan, ${reasons.join(", en ")}. Dat betekent niet dat er zeker geen route bestaat, wel dat het met deze instellingen lastig is.`;
+  const reasonText =
+    reasons.length === 1 ? reasons[0] : `${reasons.slice(0, -1).join(", ")} of ${reasons[reasons.length - 1]}`;
+  return `${base} De routes die zijn geprobeerd ${reasonText}. Dat betekent niet dat er zeker geen route bestaat, wel dat het met deze instellingen lastig is.`;
 }
 
 export function ProposalScreen() {

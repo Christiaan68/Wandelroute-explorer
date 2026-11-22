@@ -85,14 +85,16 @@ export function NavigationScreen() {
 
   useWakeLock(keepAwake && !finished);
 
-  // Bepaal welke route/context we navigeren: hervatten vanaf journaal, of net geaccepteerd vanuit de store.
+  // Bepaal welke route/context we navigeren: net geaccepteerd vanuit de store,
+  // of hervatten vanaf het journaal. Hervatten gebeurt ook ZONDER ?resume=1
+  // als er geen net geaccepteerde route is maar wel een lopende wandeling in
+  // het journaal staat: dat is precies de situatie na het herladen van deze
+  // pagina (op iPhones gebeurt dat vaak vanzelf na schermvergrendeling of
+  // wisselen van app). Voorheen gaf dat "Geen actieve wandeling gevonden".
   useEffect(() => {
-    if (isResume) {
+    function resumeFromJournal(): boolean {
       const snapshot = loadActiveWalk();
-      if (!snapshot) {
-        setContext("not-found");
-        return;
-      }
+      if (!snapshot) return false;
       startedAtMsRef.current = new Date(snapshot.startedAt).getTime();
       setContext({
         start: snapshot.start,
@@ -115,13 +117,18 @@ export function NavigationScreen() {
         previousProgressMetersRef.current = seeded.distanceAlongLineMeters;
         lastRouteIdRef.current = snapshot.plannedRoute.id;
       }
+      return true;
+    }
+
+    if (isResume) {
+      if (!resumeFromJournal()) setContext("not-found");
       return;
     }
 
     if (candidate && params) {
       const startedAt = new Date().toISOString();
       startedAtMsRef.current = Date.now();
-      setContext({
+      const newContext: ActiveWalkContext = {
         start: params.start,
         startLabel: params.startLabel,
         surfacePreference: params.surfacePreference,
@@ -129,11 +136,24 @@ export function NavigationScreen() {
         originalRoute: candidate,
         startedAt,
         initialTrack: [],
+      };
+      setContext(newContext);
+      // Meteen in het journaal zetten (niet pas na de eerste gps-positie), zodat
+      // ook een herlaadactie vlak na het starten de wandeling niet kwijtraakt.
+      saveActiveWalk({
+        startedAt,
+        start: newContext.start,
+        startLabel: newContext.startLabel,
+        surfacePreference: newContext.surfacePreference,
+        plannedRoute: candidate,
+        originalRoute: candidate,
+        actualTrack: [],
+        lastUpdatedAt: startedAt,
       });
       return;
     }
 
-    setContext("not-found");
+    if (!resumeFromJournal()) setContext("not-found");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isResume]);
 
@@ -290,6 +310,16 @@ export function NavigationScreen() {
       // afwijkpunt in plaats van naar het echte startpunt, en de opgeslagen
       // wandeling kreeg het terugstuk als "geplande route".
       setContext({ ...context, route: returnRoute });
+      saveActiveWalk({
+        startedAt: context.startedAt,
+        start: context.start,
+        startLabel: context.startLabel,
+        surfacePreference: context.surfacePreference,
+        plannedRoute: returnRoute,
+        originalRoute: context.originalRoute,
+        actualTrack: track,
+        lastUpdatedAt: new Date().toISOString(),
+      });
       offRouteDetector.current.reset();
       announcedRef.current.clear();
       setOffRouteWarning(false);
@@ -333,8 +363,9 @@ export function NavigationScreen() {
         </p>
         <h1 className="text-xl font-bold text-moss-800">Locatietoegang nodig</h1>
         <p className="max-w-sm text-sm text-bark-700">
-          Wandelroute Explorer gebruikt je live locatie alleen op dit toestel om je tijdens het wandelen te volgen en
-          afslag-instructies te geven. Je locatie wordt niet verstuurd of extern opgeslagen.
+          Wandelroute Explorer gebruikt je live locatie om je tijdens het wandelen te volgen en afslag-instructies te
+          geven. Je gelopen route wordt alleen op dit toestel opgeslagen. Alleen als je onderweg kiest voor
+          &quot;Bereken route terug&quot;, wordt je huidige positie verstuurd om die route te berekenen.
         </p>
         <button
           onClick={() => setLocationEnabled(true)}

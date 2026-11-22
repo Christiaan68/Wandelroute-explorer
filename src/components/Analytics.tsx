@@ -4,7 +4,7 @@ import { useEffect, useRef } from "react";
 import Script from "next/script";
 import { usePathname } from "next/navigation";
 import { useSettingsStore } from "@/lib/state/settings-store";
-import { GA_MEASUREMENT_ID } from "@/lib/analytics/ga";
+import { disableAnalytics, enableAnalytics, GA_MEASUREMENT_ID } from "@/lib/analytics/ga";
 
 declare global {
   interface Window {
@@ -31,6 +31,15 @@ export function Analytics() {
   const consent = useSettingsStore((s) => s.analyticsConsent);
   const setConsent = useSettingsStore((s) => s.setAnalyticsConsent);
   const skipNextPageView = useRef(true);
+
+  // Toestemming ingetrokken, nooit gegeven of gewist via "Verwijder alle
+  // lokale gegevens": GA in deze sessie uitzetten en de cookies opruimen.
+  // Weer toestemming gegeven zonder te herladen: de uitschakeling opheffen.
+  useEffect(() => {
+    if (!GA_MEASUREMENT_ID) return;
+    if (consent === "granted") enableAnalytics();
+    else disableAnalytics();
+  }, [consent]);
 
   useEffect(() => {
     if (consent !== "granted" || !GA_MEASUREMENT_ID) return;

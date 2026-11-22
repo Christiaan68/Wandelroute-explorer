@@ -64,7 +64,7 @@
   },
   {
     "question": "Wat gebeurt er met mijn wandelingen en locatiegegevens?",
-    "answer": "Je wandelgeschiedenis en instellingen worden alleen lokaal op je eigen toestel opgeslagen (in je browser) en niet naar een server verstuurd of daar bewaard, met uitzondering van de routeaanvraag zelf die nodig is om een route te kunnen berekenen. Je kunt al je lokale gegevens op elk moment in één keer verwijderen via Instellingen.",
+    "answer": "Je wandelgeschiedenis, gelopen routes en instellingen worden alleen lokaal op je eigen toestel opgeslagen (in je browser). Om een route te berekenen sturen we het startpunt via onze server naar de routeplanner (openrouteservice); kies je onderweg \"Bereken route terug naar mijn bestemming\", dan gaat ook je huidige positie mee. MijnLoopje bewaart deze gegevens niet. Adressen die je intypt gaan via onze server naar de adreszoeker van OpenStreetMap, en de kaart wordt geladen van de servers van OpenStreetMap, die daarbij je IP-adres zien. Je kunt al je lokale gegevens op elk moment in één keer verwijderen via Instellingen.",
     "category": "Privacy en gegevens",
     "order": 10,
     "published": true
