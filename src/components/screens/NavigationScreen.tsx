@@ -31,7 +31,15 @@ interface ActiveWalkContext {
   start: Coordinate;
   startLabel: string;
   surfacePreference: SurfacePreference;
+  /** De route die nu genavigeerd wordt (na "Bereken route terug" is dat de terugroute). */
   route: RouteCandidate;
+  /**
+   * De oorspronkelijk gekozen route (de rondwandeling zelf). Blijft ongewijzigd
+   * bij herberekenen, zodat de opgeslagen wandeling, "Geplande afstand" en
+   * "Wandel deze route opnieuw" over de echte rondwandeling gaan en niet over
+   * het korte terugstuk.
+   */
+  originalRoute: RouteCandidate;
   startedAt: string;
   initialTrack: LngLat[];
 }
@@ -91,6 +99,8 @@ export function NavigationScreen() {
         startLabel: snapshot.startLabel,
         surfacePreference: snapshot.surfacePreference,
         route: snapshot.plannedRoute,
+        // Oudere journaal-records (van vóór dit veld) hebben geen originalRoute.
+        originalRoute: snapshot.originalRoute ?? snapshot.plannedRoute,
         startedAt: snapshot.startedAt,
         initialTrack: snapshot.actualTrack,
       });
@@ -116,6 +126,7 @@ export function NavigationScreen() {
         startLabel: params.startLabel,
         surfacePreference: params.surfacePreference,
         route: candidate,
+        originalRoute: candidate,
         startedAt,
         initialTrack: [],
       });
@@ -145,15 +156,15 @@ export function NavigationScreen() {
         date: context.startedAt,
         startLabel: context.startLabel,
         start: context.start,
-        plannedRoute: context.route.geometry,
+        plannedRoute: context.originalRoute.geometry,
         actualTrack: track,
-        plannedDistanceMeters: context.route.distanceMeters,
+        plannedDistanceMeters: context.originalRoute.distanceMeters,
         actualDistanceMeters: distanceMeters,
         durationSeconds,
         averageSpeedKmh: averageSpeedKmh(distanceMeters, durationSeconds),
         surfacePreference: context.surfacePreference,
         status,
-        routeCandidate: context.route,
+        routeCandidate: context.originalRoute,
       };
 
       try {
@@ -245,6 +256,7 @@ export function NavigationScreen() {
         startLabel: context.startLabel,
         surfacePreference: context.surfacePreference,
         plannedRoute: context.route,
+        originalRoute: context.originalRoute,
         actualTrack: track,
         lastUpdatedAt: new Date().toISOString(),
       });
@@ -272,7 +284,12 @@ export function NavigationScreen() {
       // route-specifiek gegeven, en zo geldt een tussentijdse aan/uit-wijziging
       // ook meteen bij de volgende herberekening.
       const returnRoute = await apiGenerateReturnRoute(currentFix.coordinate, destination, avoidTrafficLights);
-      setContext({ ...context, route: returnRoute, start: currentFix.coordinate });
+      // Let op: `start` (de bestemming) en `originalRoute` blijven bewust
+      // ongewijzigd. Voorheen werd `start` hier op de huidige positie gezet:
+      // een tweede herberekening routeerde dan terug naar het eerste
+      // afwijkpunt in plaats van naar het echte startpunt, en de opgeslagen
+      // wandeling kreeg het terugstuk als "geplande route".
+      setContext({ ...context, route: returnRoute });
       offRouteDetector.current.reset();
       announcedRef.current.clear();
       setOffRouteWarning(false);

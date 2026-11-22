@@ -10,11 +10,34 @@ import { getVoiceGuide } from "@/lib/speech/voice";
 import { routeCandidateGpxFileName, routeCandidateToGpx } from "@/lib/gpx/export";
 import { RouteStatsCard } from "@/components/RouteStatsCard";
 import type { DistanceTolerance, SurfacePreference } from "@/lib/types";
+import type { RejectionCounts } from "@/lib/route-generation/engine";
 
 const MapView = dynamic(() => import("@/components/MapView").then((m) => m.MapView), { ssr: false });
 
 const NEXT_TOLERANCE: Record<DistanceTolerance, DistanceTolerance | null> = { 0.05: 0.1, 0.1: 0.15, 0.15: null };
 const NEXT_SURFACE: Record<SurfacePreference, SurfacePreference> = { unpaved: "mixed", mixed: "paved", paved: "mixed" };
+const SURFACE_LABEL: Record<SurfacePreference, string> = { unpaved: "onverhard", mixed: "gemengd", paved: "verhard" };
+
+/**
+ * Uitleg bij "geen route gevonden" op basis van de ECHTE afwijzingsredenen
+ * (zie RejectionCounts in route-generation/engine.ts), i.p.v. altijd te
+ * suggereren dat de routes "te weinig verschillen" — ook als het de eerste
+ * zoekopdracht was of de afstand het probleem was.
+ */
+function describeNoRoute(counts: RejectionCounts | null, hasSeenRoutes: boolean): string {
+  const base = hasSeenRoutes
+    ? "Er is geen andere passende route gevonden."
+    : "Er is geen passende route gevonden.";
+  if (!counts) return `${base} Probeer een andere instelling of een ander startpunt.`;
+
+  const reasons: string[] = [];
+  if (counts.outsideDistanceMargin > 0) reasons.push("de routes werden te lang of te kort voor de gekozen afstandsmarge");
+  if (counts.tooSimilar > 0) reasons.push("de routes leken te veel op routes die je al hebt gezien");
+  if (counts.outAndBack > 0) reasons.push("de routes gingen grotendeels over hetzelfde pad heen en terug");
+  if (reasons.length === 0) return `${base} Probeer een andere instelling of een ander startpunt.`;
+
+  return `${base} Bij de pogingen die zijn gedaan, ${reasons.join(", en ")}. Dat betekent niet dat er zeker geen route bestaat, wel dat het met deze instellingen lastig is.`;
+}
 
 export function ProposalScreen() {
   const router = useRouter();
@@ -24,6 +47,10 @@ export function ProposalScreen() {
   const params = usePlannerStore((s) => s.params);
   const errorMessage = usePlannerStore((s) => s.errorMessage);
   const clearRejectedHistory = usePlannerStore((s) => s.clearRejectedHistory);
+  const rejectedGeometries = usePlannerStore((s) => s.rejectedGeometries);
+  const lastRejectionCounts = usePlannerStore((s) => s.lastRejectionCounts);
+  const previousCandidate = usePlannerStore((s) => s.previousCandidate);
+  const restorePreviousCandidate = usePlannerStore((s) => s.restorePreviousCandidate);
   const voiceEnabled = useSettingsStore((s) => s.voiceEnabled);
   const [accepted, setAccepted] = useState(false);
 
@@ -86,19 +113,25 @@ export function ProposalScreen() {
 
   if (status === "no_alternatives") {
     const nextTolerance = NEXT_TOLERANCE[params.tolerance];
+    const hasSeenRoutes = rejectedGeometries.length > 0;
     return (
       <main className="mx-auto flex w-full max-w-xl flex-1 flex-col gap-4 p-4">
         <div className="rounded-xl border border-alert bg-alert-soft p-4">
-          <p className="font-semibold text-bark-900">Geen voldoende verschillende route meer gevonden</p>
-          <p className="mt-1 text-sm text-bark-800">
-            Binnen de ingestelde afstandsmarge en een redelijk aantal pogingen kon geen route worden gevonden die
-            genoeg verschilt van de routes die je al hebt gezien. Dit betekent niet dat er zeker geen enkele route
-            meer bestaat — routingdiensten kunnen dat niet garanderen — maar wel dat verder zoeken met deze
-            instellingen weinig kans van slagen heeft.
+          <p className="font-semibold text-bark-900">
+            {hasSeenRoutes ? "Geen andere route gevonden" : "Geen passende route gevonden"}
           </p>
+          <p className="mt-1 text-sm text-bark-800">{describeNoRoute(lastRejectionCounts, hasSeenRoutes)}</p>
         </div>
 
         <div className="flex flex-col gap-3">
+          {previousCandidate && (
+            <button
+              onClick={() => restorePreviousCandidate()}
+              className="tap-target rounded-lg bg-moss-700 px-4 py-3 text-left font-semibold text-white"
+            >
+              ↩️ Terug naar de vorige route
+            </button>
+          )}
           {nextTolerance && (
             <button
               onClick={() => retryWithParams({ ...params, tolerance: nextTolerance })}
@@ -117,17 +150,27 @@ export function ProposalScreen() {
             onClick={() => retryWithParams({ ...params, surfacePreference: NEXT_SURFACE[params.surfacePreference] })}
             className="tap-target rounded-lg border border-moss-300 px-4 py-3 text-left font-semibold text-moss-700"
           >
-            Pas de ondergrondvoorkeur aan (naar &quot;{NEXT_SURFACE[params.surfacePreference]}&quot;)
+            Probeer ondergrond &quot;{SURFACE_LABEL[NEXT_SURFACE[params.surfacePreference]]}&quot;
           </button>
-          <button
-            onClick={() => {
-              clearRejectedHistory();
-              retryWithParams(params);
-            }}
-            className="tap-target rounded-lg border border-moss-300 px-4 py-3 text-left font-semibold text-moss-700"
-          >
-            Begin opnieuw (ook eerder afgewezen routes mogen weer voorgesteld worden)
-          </button>
+          {hasSeenRoutes && (
+            <button
+              onClick={() => {
+                clearRejectedHistory();
+                retryWithParams(params);
+              }}
+              className="tap-target rounded-lg border border-moss-300 px-4 py-3 text-left font-semibold text-moss-700"
+            >
+              Begin opnieuw (ook eerder afgewezen routes mogen weer voorgesteld worden)
+            </button>
+          )}
+          {!hasSeenRoutes && (
+            <button
+              onClick={() => retryWithParams(params)}
+              className="tap-target rounded-lg border border-moss-300 px-4 py-3 text-left font-semibold text-moss-700"
+            >
+              Nog een keer proberen
+            </button>
+          )}
         </div>
       </main>
     );

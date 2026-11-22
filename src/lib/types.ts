@@ -123,6 +123,13 @@ export interface RouteCandidate {
   generationSeed: number;
   /** Alleen aanwezig als de voorkeur "vermijd stoplichten en drukke oversteekplaatsen" was aangevraagd. */
   trafficAvoidance?: TrafficAvoidanceSummary;
+  /**
+   * Alleen aanwezig als er binnen alle pogingen geen route ZONDER
+   * heen-en-terug-stuk te vinden was en deze route daarom als beste
+   * reservekandidaat is gekozen: lengte (m) van het langste stuk waar de
+   * route over hetzelfde pad terugloopt. De UI meldt dit eerlijk.
+   */
+  outAndBackMeters?: number;
 }
 
 /** Metadata die de UI toont naast de kaart. */

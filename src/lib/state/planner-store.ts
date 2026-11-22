@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import type { LngLat, RouteCandidate, RouteSearchParams, WalkRecord } from "@/lib/types";
-import type { NoRouteReason } from "@/lib/route-generation/engine";
+import type { NoRouteReason, RejectionCounts } from "@/lib/route-generation/engine";
 
 /**
  * "no_alternatives" en "provider_unavailable" zijn beide "geen route
@@ -20,12 +20,18 @@ interface PlannerState {
   rejectedGeometries: LngLat[][];
   errorMessage: string | null;
   attemptsUsed: number;
+  /** Waarom de laatste zoekpoging geen route opleverde (per reden geteld), voor een eerlijke melding. */
+  lastRejectionCounts: RejectionCounts | null;
+  /** De route die vóór "Andere route zoeken" werd getoond, zodat je daarnaar terug kunt als er geen andere is. */
+  previousCandidate: RouteCandidate | null;
 
   startSearch: (params: RouteSearchParams) => void;
   setProposal: (candidate: RouteCandidate) => void;
-  setNoAlternatives: (attemptsUsed: number, reason: NoRouteReason) => void;
+  setNoAlternatives: (attemptsUsed: number, reason: NoRouteReason, counts?: RejectionCounts) => void;
   setError: (message: string) => void;
   rejectCurrentAndSearchAgain: () => void;
+  /** Terug naar de route die vóór de laatste "Andere route zoeken" werd getoond. */
+  restorePreviousCandidate: () => void;
   acceptCurrent: () => RouteCandidate | null;
   /** Reset alleen de "afgewezen routes"-lijst, bv. als gebruiker expliciet "begin opnieuw met eerder afgewezen routes" kiest. */
   clearRejectedHistory: () => void;
@@ -48,6 +54,8 @@ export const usePlannerStore = create<PlannerState>((set, get) => ({
   rejectedGeometries: [],
   errorMessage: null,
   attemptsUsed: 0,
+  lastRejectionCounts: null,
+  previousCandidate: null,
 
   startSearch: (params) =>
     set({
@@ -57,15 +65,18 @@ export const usePlannerStore = create<PlannerState>((set, get) => ({
       // Nieuwe zoekopdracht (nieuwe afstand/startpunt/voorkeur) -> begin met een schone lei.
       rejectedGeometries: [],
       currentCandidate: null,
+      previousCandidate: null,
+      lastRejectionCounts: null,
     }),
 
   setProposal: (candidate) => set({ status: "proposal", currentCandidate: candidate, errorMessage: null }),
 
-  setNoAlternatives: (attemptsUsed, reason) =>
+  setNoAlternatives: (attemptsUsed, reason, counts) =>
     set({
       status: reason === "provider_unavailable" ? "provider_unavailable" : "no_alternatives",
       currentCandidate: null,
       attemptsUsed,
+      lastRejectionCounts: counts ?? null,
     }),
 
   setError: (message) => set({ status: "error", errorMessage: message }),
@@ -76,6 +87,20 @@ export const usePlannerStore = create<PlannerState>((set, get) => ({
       status: "searching",
       rejectedGeometries: currentCandidate ? [...rejectedGeometries, currentCandidate.geometry] : rejectedGeometries,
       currentCandidate: null,
+      previousCandidate: currentCandidate ?? get().previousCandidate,
+    });
+  },
+
+  restorePreviousCandidate: () => {
+    const { previousCandidate, rejectedGeometries } = get();
+    if (!previousCandidate) return;
+    set({
+      status: "proposal",
+      currentCandidate: previousCandidate,
+      // De teruggezette route staat weer "op het scherm" en hoort dus niet meer bij de afgewezen routes.
+      rejectedGeometries: rejectedGeometries.filter((g) => g !== previousCandidate.geometry),
+      previousCandidate: null,
+      errorMessage: null,
     });
   },
 
@@ -97,6 +122,8 @@ export const usePlannerStore = create<PlannerState>((set, get) => ({
       status: "proposal",
       currentCandidate: walk.routeCandidate,
       rejectedGeometries: [],
+      previousCandidate: null,
+      lastRejectionCounts: null,
       errorMessage: null,
     }),
 
@@ -108,5 +135,7 @@ export const usePlannerStore = create<PlannerState>((set, get) => ({
       rejectedGeometries: [],
       errorMessage: null,
       attemptsUsed: 0,
+      lastRejectionCounts: null,
+      previousCandidate: null,
     }),
 }));

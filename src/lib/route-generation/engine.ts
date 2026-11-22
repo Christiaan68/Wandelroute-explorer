@@ -1,7 +1,7 @@
 import type { LngLat, RouteCandidate, RouteSearchParams, TrafficAvoidanceSummary } from "@/lib/types";
 import type { RoutingProvider } from "@/lib/routing/provider";
 import { maxOverlapFraction } from "@/lib/routing/similarity";
-import { hasOutAndBackSpur } from "@/lib/routing/out-and-back";
+import { longestOutAndBackSpurMeters, MIN_SPUR_LENGTH_METERS } from "@/lib/routing/out-and-back";
 import {
   fetchTrafficAvoidanceData,
   scoreRouteForTrafficAvoidance,
@@ -16,13 +16,20 @@ import {
  *     het startpunt kiest, zie ORS "round_trip").
  *  2. Vergelijk de afstand met de gewenste afstand; val buiten de marge? Pas
  *     de gevraagde lengte aan (over- of ondercorrigeren) en probeer opnieuw.
- *  3. Val binnen de marge? Controleer of de route een "heen-en-terug"-stuk
- *     bevat (een zijpad op lopen en over exact hetzelfde pad teruggaan, zie
- *     src/lib/routing/out-and-back.ts) — zo ja, afwijzen en opnieuw proberen
- *     met een andere seed/richting.
- *  4. Geen heen-en-terug-stuk? Bereken de overlapscore t.o.v. reeds
+ *  3. Val binnen de marge? Bereken de overlapscore t.o.v. reeds
  *     afgewezen/eerder getoonde routes; te veel overlap = duplicaat, probeer
  *     opnieuw met een andere seed/richting.
+ *  4. Geen duplicaat? Controleer of de route een "heen-en-terug"-stuk bevat
+ *     (een zijpad op lopen en over hetzelfde pad teruggaan, zie
+ *     src/lib/routing/out-and-back.ts). Zo ja: NIET in de gewone pool, maar
+ *     apart bewaren als reservekandidaat en opnieuw proberen. Lukt het binnen
+ *     alle pogingen niet om een route ZONDER zo'n stuk te vinden, dan wordt
+ *     de reservekandidaat met het kortste heen-en-terug-stuk alsnog getoond,
+ *     met een eerlijke melding (RouteCandidate.outAndBackMeters). Voorheen
+ *     werden deze routes hard afgewezen; in bebouwd gebied (veel parallelle
+ *     paden en doodlopende stukjes) leidde dat in de praktijk vaak tot
+ *     "geen route gevonden" (test 2026-11-22: in Utrecht en Baarn 20 van de
+ *     30 pogingen afgewezen om deze reden).
  *  5. Herhaal tot een pool van kandidaten is verzameld of het maximum aantal
  *     pogingen is bereikt.
  *  6. Sorteer de pool op afstandsafwijking, ondergrondvoorkeur-match en
@@ -61,6 +68,13 @@ const MAJOR_ROAD_CROSSING_PENALTY_WEIGHT = 2.5;
  * "provider_unavailable" hieronder.
  */
 const PROVIDER_ERROR_FAIL_FAST_THRESHOLD = 3;
+/**
+ * Een reservekandidaat met een heen-en-terug-stuk wordt alleen getoond als
+ * dat stuk niet langer is dan deze fractie van de gevraagde afstand — een
+ * route die voor een groot deel over hetzelfde pad teruggaat is geen zinnige
+ * rondwandeling meer.
+ */
+const MAX_FALLBACK_SPUR_FRACTION = 0.25;
 
 export interface GenerateRouteOptions {
   provider: RoutingProvider;
@@ -82,12 +96,21 @@ export interface GenerateRouteOptions {
  */
 export type NoRouteReason = "no_alternatives" | "provider_unavailable";
 
+/** Aantal afgewezen pogingen per reden — zodat de UI de ECHTE reden kan noemen als er geen route is. */
+export interface RejectionCounts {
+  outsideDistanceMargin: number;
+  tooSimilar: number;
+  outAndBack: number;
+  providerError: number;
+}
+
 export interface GenerateRouteResult {
   candidate: RouteCandidate | null;
   attemptsUsed: number;
   reason?: NoRouteReason;
   /** Voor transparantie/debug: waarom kandidaten werden afgewezen. */
   rejectionLog: string[];
+  rejectionCounts: RejectionCounts;
 }
 
 interface ScoredCandidate {
@@ -96,13 +119,19 @@ interface ScoredCandidate {
   overlap: number;
 }
 
+interface SpurCandidate extends ScoredCandidate {
+  spurMeters: number;
+}
+
 export async function generateRoute(options: GenerateRouteOptions): Promise<GenerateRouteResult> {
   const { provider, params, rejectedGeometries } = options;
   const maxAttempts = options.maxAttempts ?? DEFAULT_MAX_ATTEMPTS;
   const toleranceFraction = params.tolerance;
 
   const pool: ScoredCandidate[] = [];
+  const spurFallbacks: SpurCandidate[] = [];
   const rejectionLog: string[] = [];
+  const rejectionCounts: RejectionCounts = { outsideDistanceMargin: 0, tooSimilar: 0, outAndBack: 0, providerError: 0 };
   const seenGeometries: LngLat[][] = [...rejectedGeometries];
 
   // Start het ophalen van stoplicht-/drukke-weg-gegevens meteen, parallel aan
@@ -134,6 +163,7 @@ export async function generateRoute(options: GenerateRouteOptions): Promise<Gene
       });
     } catch (err) {
       rejectionLog.push(`Poging ${attempt + 1}: routingdienst gaf een fout (${(err as Error).message}).`);
+      rejectionCounts.providerError++;
       attempt++;
       consecutiveProviderErrors++;
       if (pool.length === 0 && consecutiveProviderErrors >= PROVIDER_ERROR_FAIL_FAST_THRESHOLD) {
@@ -141,7 +171,7 @@ export async function generateRoute(options: GenerateRouteOptions): Promise<Gene
         // pogingen met dezelfde dienst heeft weinig zin en laat de gebruiker
         // onnodig lang wachten op een spinner. Stop hier met een duidelijk
         // andere (eerlijkere) reden dan "no_alternatives".
-        return { candidate: null, attemptsUsed: attempt, reason: "provider_unavailable", rejectionLog };
+        return { candidate: null, attemptsUsed: attempt, reason: "provider_unavailable", rejectionLog, rejectionCounts };
       }
       continue;
     }
@@ -158,14 +188,7 @@ export async function generateRoute(options: GenerateRouteOptions): Promise<Gene
           toleranceFraction * 100,
         )}% rond ${Math.round(params.targetDistanceMeters)}m.`,
       );
-      attempt++;
-      continue;
-    }
-
-    if (hasOutAndBackSpur(candidate.geometry)) {
-      rejectionLog.push(
-        `Poging ${attempt + 1}: route bevat een heen-en-terug-stuk (gaat een zijpad op en terug over hetzelfde pad).`,
-      );
+      rejectionCounts.outsideDistanceMargin++;
       attempt++;
       continue;
     }
@@ -173,6 +196,20 @@ export async function generateRoute(options: GenerateRouteOptions): Promise<Gene
     const overlap = maxOverlapFraction(candidate.geometry, seenGeometries);
     if (overlap > OVERLAP_REJECT_THRESHOLD) {
       rejectionLog.push(`Poging ${attempt + 1}: route overlapt ${Math.round(overlap * 100)}% met een eerdere route.`);
+      rejectionCounts.tooSimilar++;
+      attempt++;
+      continue;
+    }
+
+    const spurMeters = longestOutAndBackSpurMeters(candidate.geometry);
+    if (spurMeters >= MIN_SPUR_LENGTH_METERS) {
+      rejectionLog.push(
+        `Poging ${attempt + 1}: route bevat een heen-en-terug-stuk van ca. ${Math.round(
+          spurMeters,
+        )}m (gaat een zijpad op en terug over hetzelfde pad) — bewaard als reserve.`,
+      );
+      rejectionCounts.outAndBack++;
+      spurFallbacks.push({ candidate, deviation, overlap, spurMeters });
       attempt++;
       continue;
     }
@@ -182,9 +219,28 @@ export async function generateRoute(options: GenerateRouteOptions): Promise<Gene
     attempt++;
   }
 
-  if (pool.length === 0) {
-    return { candidate: null, attemptsUsed: attempt, reason: "no_alternatives", rejectionLog };
+  // Geen enkele route zonder heen-en-terug-stuk gevonden? Gebruik dan de
+  // reservekandidaat met het kortste heen-en-terug-stuk (mits niet absurd
+  // lang), in plaats van de gebruiker met lege handen te laten staan.
+  let fallbackSpurMeters: number | null = null;
+  if (pool.length === 0 && spurFallbacks.length > 0) {
+    const maxSpur = params.targetDistanceMeters * MAX_FALLBACK_SPUR_FRACTION;
+    const acceptable = spurFallbacks.filter((c) => c.spurMeters <= maxSpur);
+    if (acceptable.length > 0) {
+      const best = acceptable.reduce((a, b) =>
+        b.spurMeters < a.spurMeters || (b.spurMeters === a.spurMeters && score(b, params) < score(a, params)) ? b : a,
+      );
+      pool.push({ candidate: best.candidate, deviation: best.deviation, overlap: best.overlap });
+      fallbackSpurMeters = Math.round(best.spurMeters);
+    }
   }
+
+  if (pool.length === 0) {
+    return { candidate: null, attemptsUsed: attempt, reason: "no_alternatives", rejectionLog, rejectionCounts };
+  }
+
+  const withSpurInfo = (c: RouteCandidate): RouteCandidate =>
+    fallbackSpurMeters !== null ? { ...c, outAndBackMeters: fallbackSpurMeters } : c;
 
   // Kandidaat zonder de stoplicht-/oversteek-voorkeur — nodig om, als de
   // voorkeur wél aan staat, de "extra afstand/tijd" t.o.v. deze voorkeur te
@@ -194,7 +250,7 @@ export async function generateRoute(options: GenerateRouteOptions): Promise<Gene
   );
 
   if (!params.avoidTrafficLights || !trafficDataPromise) {
-    return { candidate: baselineBest.candidate, attemptsUsed: attempt, rejectionLog };
+    return { candidate: withSpurInfo(baselineBest.candidate), attemptsUsed: attempt, rejectionLog, rejectionCounts };
   }
 
   const trafficData = await trafficDataPromise;
@@ -221,8 +277,8 @@ export async function generateRoute(options: GenerateRouteOptions): Promise<Gene
     ),
   };
 
-  const finalCandidate: RouteCandidate = { ...winner.entry.candidate, trafficAvoidance: summary };
-  return { candidate: finalCandidate, attemptsUsed: attempt, rejectionLog };
+  const finalCandidate: RouteCandidate = withSpurInfo({ ...winner.entry.candidate, trafficAvoidance: summary });
+  return { candidate: finalCandidate, attemptsUsed: attempt, rejectionLog, rejectionCounts };
 }
 
 /**

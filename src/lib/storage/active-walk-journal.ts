@@ -17,7 +17,10 @@ export interface ActiveWalkSnapshot {
   start: Coordinate;
   startLabel: string;
   surfacePreference: SurfacePreference;
+  /** De route die op dat moment genavigeerd wordt (kan na herberekenen de terugroute zijn). */
   plannedRoute: RouteCandidate;
+  /** De oorspronkelijk gekozen rondwandeling. Optioneel: ontbreekt in journaal-records van vóór 2026-11-22. */
+  originalRoute?: RouteCandidate;
   actualTrack: LngLat[];
   lastUpdatedAt: string; // ISO
 }

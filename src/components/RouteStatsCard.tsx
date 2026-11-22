@@ -63,6 +63,13 @@ export function RouteStatsCard({ candidate }: { candidate: RouteCandidate }) {
     <div className="rounded-xl bg-white p-4 shadow-sm ring-1 ring-moss-100">
       <p className="text-sm text-bark-700">{view.description}</p>
 
+      {candidate.outAndBackMeters !== undefined && (
+        <p className="mt-2 rounded-lg bg-alert-soft px-3 py-2 text-sm text-bark-900">
+          ⚠️ Hier was geen route zonder heen-en-terug-stuk te vinden. Op deze route loop je ongeveer{" "}
+          {Math.round(candidate.outAndBackMeters / 10) * 10} m over hetzelfde pad terug.
+        </p>
+      )}
+
       {trafficNotice && (
         <p
           className={`mt-2 rounded-lg px-3 py-2 text-sm ${

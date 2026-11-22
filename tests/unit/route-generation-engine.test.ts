@@ -205,6 +205,80 @@ describe("generateRoute — heen-en-terug-stukken", () => {
     expect(result.attemptsUsed).toBe(2);
     expect(result.rejectionLog.length).toBe(1);
     expect(result.rejectionLog[0]).toMatch(/heen-en-terug/);
+    expect(result.candidate!.outAndBackMeters).toBeUndefined();
+    expect(result.rejectionCounts.outAndBack).toBe(1);
+  });
+
+  it("toont de route met het kortste heen-en-terug-stuk als er geen enkele schone route te vinden is (i.p.v. 'geen route')", async () => {
+    // Twee varianten: een kort (~100m) en een langer (~300m) heen-en-terug-zijpad.
+    const SHORT_SPUR = SPUR_GEOMETRY;
+    const LONG_SPUR: LngLat[] = [
+      [5.0, 52.0],
+      [5.004377, 52.0],
+      [5.0, 52.0],
+      [5.02, 52.02],
+      [5.03, 52.0],
+      [5.0, 52.0],
+    ];
+    let calls = 0;
+    const provider: RoutingProvider = {
+      name: "fake",
+      generateRoundTrip: vi.fn(async () => {
+        calls++;
+        return makeCandidate({ geometry: calls === 1 ? LONG_SPUR : SHORT_SPUR, distanceMeters: 5000 });
+      }),
+      generateDirections: vi.fn(async () => makeCandidate({ geometry: CLEAN_GEOMETRY })),
+    };
+
+    const result = await generateRoute({ provider, params: BASE_PARAMS, rejectedGeometries: [], maxAttempts: 2 });
+
+    expect(result.candidate).not.toBeNull();
+    expect(result.reason).toBeUndefined();
+    expect(result.candidate!.geometry).toEqual(SHORT_SPUR);
+    expect(result.candidate!.outAndBackMeters).toBeGreaterThan(50);
+    expect(result.candidate!.outAndBackMeters).toBeLessThan(200);
+    expect(result.rejectionCounts.outAndBack).toBe(2);
+  });
+
+  it("toont geen reserveroute als het heen-en-terug-stuk meer dan een kwart van de afstand is", async () => {
+    const provider: RoutingProvider = {
+      name: "fake",
+      generateRoundTrip: vi.fn(async () => makeCandidate({ geometry: SPUR_GEOMETRY, distanceMeters: 300 })),
+      generateDirections: vi.fn(async () => makeCandidate({ geometry: CLEAN_GEOMETRY })),
+    };
+
+    // Gevraagd: 300m. Een heen-en-terug-stuk van ~100m is dan >25% van de route.
+    const result = await generateRoute({
+      provider,
+      params: { ...BASE_PARAMS, targetDistanceMeters: 300 },
+      rejectedGeometries: [],
+      maxAttempts: 2,
+    });
+
+    expect(result.candidate).toBeNull();
+    expect(result.reason).toBe("no_alternatives");
+    expect(result.rejectionCounts.outAndBack).toBe(2);
+  });
+});
+
+describe("generateRoute — afwijzingsredenen tellen", () => {
+  it("telt per reden hoe vaak een poging is afgewezen, zodat de melding de echte oorzaak kan noemen", async () => {
+    let calls = 0;
+    const provider: RoutingProvider = {
+      name: "fake",
+      generateRoundTrip: vi.fn(async () => {
+        calls++;
+        if (calls === 1) return makeCandidate({ geometry: LINE_2, distanceMeters: 9000 });
+        if (calls === 2) throw new Error("timeout");
+        return makeCandidate({ geometry: LINE_1, distanceMeters: 5000 });
+      }),
+      generateDirections: vi.fn(async () => makeCandidate({ geometry: LINE_1 })),
+    };
+
+    const result = await generateRoute({ provider, params: BASE_PARAMS, rejectedGeometries: [LINE_1], maxAttempts: 3 });
+
+    expect(result.candidate).toBeNull();
+    expect(result.rejectionCounts).toEqual({ outsideDistanceMargin: 1, tooSimilar: 1, outAndBack: 0, providerError: 1 });
   });
 });
 
