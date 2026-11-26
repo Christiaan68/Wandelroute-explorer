@@ -51,9 +51,21 @@ const securityHeaders = [
   },
 ];
 
+/**
+ * Versie van deze build, gebruikt om te zien of de app op een telefoon nog een
+ * oude versie draait (zie src/lib/app-version.ts en /api/version). Op Vercel
+ * het ID van de deployment (elke deployment uniek, ook bij dezelfde commit);
+ * lokaal "lokaal", zodat er bij ontwikkelen nooit automatisch herladen wordt.
+ */
+const appVersion =
+  process.env.VERCEL_DEPLOYMENT_ID || process.env.VERCEL_GIT_COMMIT_SHA || "lokaal";
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  env: {
+    NEXT_PUBLIC_APP_VERSION: appVersion,
+  },
   eslint: {
     // Lint draait apart via `npm run lint`; blokkeer production build niet op stijlkwesties.
     ignoreDuringBuilds: true,

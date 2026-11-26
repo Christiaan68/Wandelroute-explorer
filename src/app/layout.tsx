@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Analytics } from "@/components/Analytics";
+import { AppUpdateChecker } from "@/components/AppUpdateChecker";
 import { BottomNav } from "@/components/BottomNav";
 import { CopyrightFooter } from "@/components/CopyrightFooter";
 import { ServiceWorkerRegister } from "@/components/ServiceWorkerRegister";
@@ -76,6 +77,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="nl">
       <body className="flex min-h-dvh flex-col font-sans">
         <ServiceWorkerRegister />
+        <AppUpdateChecker />
         <div className="flex flex-1 flex-col">{children}</div>
         <CopyrightFooter />
         <BottomNav />
